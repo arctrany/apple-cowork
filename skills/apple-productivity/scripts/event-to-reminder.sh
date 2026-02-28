@@ -165,6 +165,15 @@ echo "   时间：$START_TIME - $END_TIME"
 # 创建提醒任务
 CREATED_TASKS=()
 
+# 构建备注内容
+BODY_CONTENT="会议时间：$START_TIME"
+[ -n "$LOCATION" ] && BODY_CONTENT="$BODY_CONTENT
+地点：$LOCATION"
+[ -n "$NOTE" ] && BODY_CONTENT="$BODY_CONTENT
+备注：$NOTE"
+
+ESCAPED_BODY_CONTENT="${BODY_CONTENT//\"/\\\"}"
+
 # 创建主任务（会后跟进）
 if [ "$CREATE_FOLLOWUP_TASK" = true ]; then
     FOLLOWUP_SCRIPT=$(cat <<EOF
@@ -173,7 +182,7 @@ tell application "Reminders"
         set targetList to list "$ESCAPED_LIST" of account "$ESCAPED_ACCOUNT"
         set newReminder to make new reminder at end of reminders of targetList with properties {
             name:"[会后跟进] $NAME",
-            body:"会议时间：$START_TIME" & (if "$LOCATION" != "" then return "地点：" & "$LOCATION" else return "") & (if "$NOTE" != "" then return linefeed & "备注：" & "$NOTE" else return "")
+            body:"$ESCAPED_BODY_CONTENT"
         }
         set due date of newReminder to date "$END_TIME" + $FOLLOWUP_HOURS_AFTER * 60 * 60
         get "跟进任务已创建"
@@ -199,7 +208,7 @@ tell application "Reminders"
         set targetList to list "$ESCAPED_LIST" of account "$ESCAPED_ACCOUNT"
         set newReminder to make new reminder at end of reminders of targetList with properties {
             name:"[会前准备] $NAME",
-            body:"会议时间：$START_TIME" & (if "$LOCATION" != "" then return "地点：" & "$LOCATION" else return "") & (if "$NOTE" != "" then return linefeed & "备注：" & "$NOTE" else return "")
+            body:"$ESCAPED_BODY_CONTENT"
         }
         set due date of newReminder to date "$START_TIME" - $PREP_HOURS_BEFORE * 60 * 60
         set priority of newReminder to 2

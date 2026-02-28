@@ -164,6 +164,15 @@ ESCAPED_LOCATION="${LOCATION//\"/\\\"}"
 ESCAPED_NOTE="${NOTE//\"/\\\"}"
 
 # 创建 AppleScript
+LOCATION_SECTION=""
+NOTE_SECTION=""
+if [ -n "$ESCAPED_LOCATION" ]; then
+    LOCATION_SECTION="set location of newEvent to \"$ESCAPED_LOCATION\""
+fi
+if [ -n "$ESCAPED_NOTE" ]; then
+    NOTE_SECTION="set note of newEvent to \"$ESCAPED_NOTE\""
+fi
+
 APPLESCRIPT=$(cat <<EOF
 tell application "Calendar"
     try
@@ -176,14 +185,8 @@ tell application "Calendar"
             start date:eventStart,
             end date:eventEnd
         }
-
-        if "$ESCAPED_LOCATION" != "" then
-            set location of newEvent to "$ESCAPED_LOCATION"
-        end if
-
-        if "$ESCAPED_NOTE" != "" then
-            set note of newEvent to "$ESCAPED_NOTE"
-        end if
+        $LOCATION_SECTION
+        $NOTE_SECTION
 
         get id of newEvent
     on error errMsg

@@ -97,10 +97,10 @@ if [ -n "$PARSE_INPUT" ]; then
     fi
 
     # 检测具体时间（例如"下午 3 点"）
-    if [[ "$PARSE_INPUT" =~ 下午 ([0-9]+) 点 ]]; then
+    if [[ "$PARSE_INPUT" =~ 下午\ ([0-9]+)\ 点 ]]; then
         HOUR=$((${BASH_REMATCH[1]} + 12))
         DUE_DATE="${DUE_DATE:-$(date +%Y-%m-%d)} ${HOUR}:00"
-    elif [[ "$PARSE_INPUT" =~ 上午 ([0-9]+) 点 ]]; then
+    elif [[ "$PARSE_INPUT" =~ 上午\ ([0-9]+)\ 点 ]]; then
         HOUR=${BASH_REMATCH[1]}
         DUE_DATE="${DUE_DATE:-$(date +%Y-%m-%d)} ${HOUR}:00"
     elif [[ "$PARSE_INPUT" =~ ([0-9]+):([0-9]+) ]]; then
@@ -121,23 +121,27 @@ ESCAPED_LIST="${REMINDER_LIST//\"/\\\"}"
 ESCAPED_ACCOUNT="${ACCOUNT//\"/\\\"}"
 
 # 创建 AppleScript
+if [ -n "$ESCAPED_NOTE" ]; then
+    NOTE_SECTION="set body of newReminder to \"$ESCAPED_NOTE\""
+else
+    NOTE_SECTION=""
+fi
+
+if [ -n "$DUE_DATE" ]; then
+    DUE_SECTION="set due date of newReminder to date \"$DUE_DATE\""
+else
+    DUE_SECTION=""
+fi
+
 APPLESCRIPT=$(cat <<EOF
 tell application "Reminders"
     set targetList to list "$ESCAPED_LIST" of account "$ESCAPED_ACCOUNT"
     set newReminder to make new reminder at end of reminders of targetList with properties {name:"$ESCAPED_NAME"}
-
-    if "$ESCAPED_NOTE" != "" then
-        set body of newReminder to "$ESCAPED_NOTE"
-    end if
-
+    $NOTE_SECTION
     if $PRIORITY > 0 then
         set priority of newReminder to $PRIORITY
     end if
-
-    if "$DUE_DATE" != "" then
-        set due date of newReminder to date "$DUE_DATE"
-    end if
-
+    $DUE_SECTION
     get id of newReminder
 end tell
 EOF

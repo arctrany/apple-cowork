@@ -130,6 +130,13 @@ fi
 # 解析返回结果
 IFS='|' read -r NAME BODY START_TIME END_TIME <<< "$RESULT"
 
+# 构建备注内容
+NOTE_CONTENT="从 Reminders 转换而来"
+[ -n "$BODY" ] && NOTE_CONTENT="$NOTE_CONTENT
+原任务备注：$BODY"
+
+ESCAPED_NOTE_CONTENT="${NOTE_CONTENT//\"/\\\"}"
+
 # 创建日历事件
 EVENT_SCRIPT=$(cat <<EOF
 tell application "Calendar"
@@ -142,7 +149,7 @@ tell application "Calendar"
             summary:"[任务] $NAME",
             start date:eventStart,
             end date:eventEnd,
-            note:"从 Reminders 转换而来" & (if "$BODY" != "" then return linefeed & "原任务备注：" & "$BODY" else return "")
+            note:"$ESCAPED_NOTE_CONTENT"
         }
 
         get id of newEvent

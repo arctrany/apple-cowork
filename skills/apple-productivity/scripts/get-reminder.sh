@@ -75,10 +75,9 @@ tell application "Reminders"
         set r to reminder "$ESCAPED_NAME" of list "$ESCAPED_LIST" of account "$ESCAPED_ACCOUNT"
 
         set info to "名称：" & name of r & linefeed
-
         set info to info & "列表：" & (name of container of r) & linefeed
 
-        if body of r is not missing value and body of r != "" then
+        if body of r is not missing value then
             set info to info & "备注：" & body of r & linefeed
         end if
 
@@ -90,10 +89,6 @@ tell application "Reminders"
 
         if due date of r is not missing value then
             set info to info & "截止时间：" & (due date of r) & linefeed
-        end if
-
-        if reminder date of r is not missing value then
-            set info to info & "提醒时间：" & (reminder date of r) & linefeed
         end if
 
         if completed of r then
