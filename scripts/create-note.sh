@@ -43,7 +43,8 @@ if [[ -z "$NOTE_BODY" ]]; then
 fi
 
 # Load configuration from .local.md if exists
-CONFIG_FILE="$HOME/.claude/plugins/cache/claude-plugins-official/apple-notes/.local.md"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CONFIG_FILE="$SCRIPT_DIR/../skills/apple-notes/.local.md"
 if [[ -f "$CONFIG_FILE" ]]; then
     if [[ -z "$FOLDER" ]]; then
         FOLDER=$(grep "^default_folder:" "$CONFIG_FILE" | sed 's/default_folder: *//')

@@ -27,7 +27,8 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Load configuration from .local.md if exists
-CONFIG_FILE="$HOME/.claude/plugins/cache/claude-plugins-official/apple-notes/.local.md"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CONFIG_FILE="$SCRIPT_DIR/../skills/apple-notes/.local.md"
 if [[ -f "$CONFIG_FILE" ]]; then
     if [[ -z "$ACCOUNT" ]]; then
         ACCOUNT=$(grep "^default_account:" "$CONFIG_FILE" | sed 's/default_account: *//')
