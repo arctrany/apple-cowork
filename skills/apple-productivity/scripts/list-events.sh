@@ -129,10 +129,15 @@ EOF
 
 # 执行 AppleScript
 RESULT=$(osascript -e "$APPLESCRIPT" 2>&1)
+
+# 分离输出和计数
+OUTPUT_LINES=$(echo "$RESULT" | grep -v "^$")
 COUNT=$(echo "$RESULT" | tail -1)
 
 echo ""
 echo "=== $CALENDAR_NAME ($RANGE: $DATE) ==="
-echo "$RESULT" | head -n -1
+if [ -n "$OUTPUT_LINES" ]; then
+    echo "$OUTPUT_LINES" | head -n -1 2>/dev/null || echo "$OUTPUT_LINES"
+fi
 echo ""
 echo "共 $COUNT 个事件"

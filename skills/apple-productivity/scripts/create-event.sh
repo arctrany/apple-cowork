@@ -111,10 +111,10 @@ if [ -n "$PARSE_INPUT" ]; then
     fi
 
     # 检测时间（例如"下午 2 点"）
-    if [[ "$PARSE_INPUT" =~ 下午 ([0-9]+) 点 ]]; then
+    if [[ "$PARSE_INPUT" =~ 下午\ ([0-9]+)\ 点 ]]; then
         START_HOUR=$((${BASH_REMATCH[1]} + 12))
         START_TIME="${BASE_DATE} ${START_HOUR}:00"
-    elif [[ "$PARSE_INPUT" =~ 上午 ([0-9]+) 点 ]]; then
+    elif [[ "$PARSE_INPUT" =~ 上午\ ([0-9]+)\ 点 ]]; then
         START_HOUR=${BASH_REMATCH[1]}
         START_TIME="${BASE_DATE} ${START_HOUR}:00"
     elif [[ "$PARSE_INPUT" =~ ([0-9]+):([0-9]+) ]]; then
@@ -122,10 +122,10 @@ if [ -n "$PARSE_INPUT" ]; then
     fi
 
     # 检测结束时间（例如"到 3 点"）
-    if [[ "$PARSE_INPUT" =~ 到 [下上]?午? ?([0-9]+) 点 ]]; then
+    if [[ "$PARSE_INPUT" =~ 到\ [下上]?午?\ ?([0-9]+)\ 点 ]]; then
         END_HOUR=$((${BASH_REMATCH[1]} + 12))
         END_TIME="${BASE_DATE} ${END_HOUR}:00"
-    elif [[ "$PARSE_INPUT" =~ 到 ?([0-9]+):([0-9]+) ]]; then
+    elif [[ "$PARSE_INPUT" =~ 到\ ?([0-9]+):([0-9]+) ]]; then
         END_TIME="${BASE_DATE} ${BASH_REMATCH[1]}:${BASH_REMATCH[2]}"
     fi
 
@@ -135,7 +135,7 @@ if [ -n "$PARSE_INPUT" ]; then
     fi
 
     # 提取地点（例如"在办公室"）
-    if [[ "$PARSE_INPUT" =~ 在 ([^，,]+) ]]; then
+    if [[ "$PARSE_INPUT" =~ 在\ ([^，,]+) ]]; then
         LOCATION="${BASH_REMATCH[1]}"
     fi
 fi
@@ -163,34 +163,24 @@ ESCAPED_ACCOUNT="${ACCOUNT//\"/\\\"}"
 ESCAPED_LOCATION="${LOCATION//\"/\\\"}"
 ESCAPED_NOTE="${NOTE//\"/\\\"}"
 
-# 创建 AppleScript
-LOCATION_SECTION=""
-NOTE_SECTION=""
+# 创建 AppleScript 脚本
+# 注意：Calendar AppleScript 不支持在创建时设置 note 属性
 if [ -n "$ESCAPED_LOCATION" ]; then
-    LOCATION_SECTION="set location of newEvent to \"$ESCAPED_LOCATION\""
-fi
-if [ -n "$ESCAPED_NOTE" ]; then
-    NOTE_SECTION="set note of newEvent to \"$ESCAPED_NOTE\""
+    PROPERTIES="summary:\"$ESCAPED_TITLE\", start date:eventStart, end date:eventEnd, location:\"$ESCAPED_LOCATION\""
+else
+    PROPERTIES="summary:\"$ESCAPED_TITLE\", start date:eventStart, end date:eventEnd"
 fi
 
 APPLESCRIPT=$(cat <<EOF
 tell application "Calendar"
+    set targetCalendar to calendar "$ESCAPED_CALENDAR"
+    set eventStart to date "$START_TIME"
+    set eventEnd to date "$END_TIME"
     try
-        set targetCalendar to calendar "$ESCAPED_CALENDAR"
-        set eventStart to date "$START_TIME"
-        set eventEnd to date "$END_TIME"
-
-        set newEvent to make new event at end of events of targetCalendar with properties {
-            summary:"$ESCAPED_TITLE",
-            start date:eventStart,
-            end date:eventEnd
-        }
-        $LOCATION_SECTION
-        $NOTE_SECTION
-
+        set newEvent to make new event at end of events of targetCalendar with properties {$PROPERTIES}
         get id of newEvent
     on error errMsg
-        return "错误：" & errMsg
+        return "ERROR:" & errMsg
     end try
 end tell
 EOF
