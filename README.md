@@ -38,22 +38,44 @@ echo "# 标题
 ./scripts/note-with-style.sh --name "项目总结" --file "summary.md" --update
 ```
 
-详细文档：[README.md](./README.md)
+详细文档：[skills/apple-notes/README.md](./skills/apple-notes/README.md)
+
+### ✅ Apple Productivity 模块 (Reminders + Calendar)
+
+完整的 Apple Reminders 和 Calendar 集成工具，支持：
+
+- **任务管理** - 创建/读取/更新/删除/完成任务
+- **日程管理** - 创建/读取/更新/删除日历事件
+- **自然语言解析** - "明天下午 3 点开会"自动解析时间
+- **空闲时间查询** - 查找可用的会议时间段
+- **跨模块整合** - 任务↔日程双向转换，同步视图
+
+#### 快速开始
+
+```bash
+cd skills/apple-productivity
+
+# 创建任务
+./scripts/create-reminder.sh --name "完成项目报告" --due "2026-02-28 15:00" --priority 2
+
+# 创建事件
+./scripts/create-event.sh --title "项目会议" --start "2026-02-28 14:00" --end "2026-02-28 15:00" --location "办公室"
+
+# 同步视图（查看某天的任务和事件）
+./scripts/sync-view.sh --date "2026-02-28"
+
+# 任务转日程
+./scripts/reminder-to-event.sh --name "完成项目报告" --duration 60
+
+# 日程转任务（创建会前准备和会后跟进任务）
+./scripts/event-to-reminder.sh --title "项目会议" --create-prep-task --create-followup-task
+```
+
+详细文档：[skills/apple-productivity/SKILL.md](./skills/apple-productivity/SKILL.md)
 
 ### 🚧 规划中模块
 
-#### Apple Reminders 模块
-- 创建/更新/完成任务
-- 管理清单列表
-- 设置截止日期和提醒
-- 自然语言任务解析
-
-#### Apple Calendar 模块
-- 创建/修改/删除事件
-- 查询空闲时间
-- 会议安排建议
-
-#### 跨模块整合
+#### 跨模块整合增强
 - Notes ↔ Reminders 双向链接
 - 会议记录自动创建任务
 - 对话内容自动归档
