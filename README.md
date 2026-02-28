@@ -1,189 +1,208 @@
 # Apple Cowork
 
-> AI + Apple 生态互通方案 - 彻底解决 AI 与 Apple 生产力工具的整合
+> AI + Apple 生态互通方案 — 让任何 AI Code Agent 无缝操作 Apple Notes、Reminders、Calendar
 
-## 项目愿景
+## 支持的 AI Code Agent
 
-本项目旨在建立一套完整的工具链，让 AI 能够无缝与 Apple 生态中的生产力工具（Notes、Reminders、Calendar 等）进行交互，实现：
+| Agent | 接入方式 | 状态 |
+|-------|---------|------|
+| **Claude Code** | 原生支持，skills 目录自动加载 | ✅ 已验证 |
+| **Cursor** | 复制 skills/ 到项目，通过终端执行脚本 | ✅ 兼容 |
+| **Windsurf** | 复制 skills/ 到项目，通过终端执行脚本 | ✅ 兼容 |
+| **Cline / Roo Code** | 复制 skills/ 到项目，通过终端执行脚本 | ✅ 兼容 |
+| **其他 CLI 工具** | 任何能执行 bash 脚本的 AI 工具均可使用 | ✅ 兼容 |
 
-- 📝 **智能笔记管理** - 使用自然语言创建、更新、搜索 Apple Notes
-- ✅ **任务自动化** - 将对话内容自动转化为 Reminders 任务
-- 📅 **日程整合** - AI 协助管理 Calendar 日程安排
-- 🔗 **知识互通** - 打破 AI 对话与 Apple 原生应用的数据孤岛
+**核心原理：** 所有功能通过标准 shell 脚本 + AppleScript 实现，不依赖任何特定 AI 平台 API。只要你的 AI 工具能执行 bash 命令，就能使用全部功能。
 
-## 当前模块
+## 安装
 
-### ✅ Apple Notes 模块
+### 前置要求
 
-受 Notion/Obsidian 启发的结构化笔记工具，支持：
+- macOS 10.15 (Catalina) 或更高版本
+- Python 3（macOS 自带）
+- `pip3 install markdown pyyaml`（仅 Notes 模块 Markdown 转换需要）
 
-- **Frontmatter 属性** - 页面元数据管理
-- **STAR 框架** - 结构化问题分析（Situation/Task/Action/Result）
-- **Callout 块** - 8 种信息框（NOTE/WARNING/TIP/KEY/TODO/SUCCESS/ERROR/QUESTION）
-- **复选框** - Apple Notes 原生风格的任务列表
-
-#### 快速开始
+### 步骤 1：克隆项目
 
 ```bash
-# 创建笔记
+git clone https://github.com/arctrany/apple-cowork.git
+cd apple-cowork
+```
+
+### 步骤 2：授权脚本执行
+
+```bash
+chmod +x scripts/*.sh
+chmod +x skills/apple-notes/scripts/*.sh
+chmod +x skills/apple-productivity/scripts/*.sh
+```
+
+### 步骤 3：macOS 权限设置
+
+首次运行脚本时，macOS 会弹出权限请求。你也可以提前在系统设置中授权：
+
+1. **系统设置** → 隐私与安全性 → **备忘录** → 勾选终端 / 脚本编辑器
+2. **系统设置** → 隐私与安全性 → **提醒事项** → 勾选终端
+3. **系统设置** → 隐私与安全性 → **日历** → 勾选终端
+
+### 步骤 4：配置默认账户（可选）
+
+复制配置模板并修改：
+
+```bash
+cp skills/apple-productivity/.local.example.md skills/apple-productivity/.local.md
+```
+
+编辑 `.local.md` 设置你的默认账户：
+
+```yaml
+---
+default_account: iCloud        # 你的 Apple 账户名（如 iCloud、谷歌 等）
+default_reminder_list: 提醒事项  # 默认任务列表
+default_calendar: 日历          # 默认日历
+default_event_duration: 60      # 默认事件时长（分钟）
+---
+```
+
+## 接入不同 AI Agent
+
+### Claude Code（推荐）
+
+项目中的 `skills/` 目录会被 Claude Code 自动识别，无需额外配置。
+
+```bash
+# 在项目目录下直接使用
+cd apple-cowork
+claude
+
+# 然后对 Claude 说：
+# "帮我创建一个提醒事项：明天下午3点完成项目报告"
+# "列出我今天的日历事件"
+# "创建一篇笔记，记录今天的会议要点"
+```
+
+### Cursor / Windsurf / Cline
+
+1. 将 `skills/` 和 `scripts/` 目录复制到你的项目中（或保持独立目录）
+2. 在 AI 对话中引用 SKILL.md 让 Agent 了解可用命令
+3. Agent 通过终端执行脚本
+
+```bash
+# 示例：在 Cursor 中，告诉 AI 读取技能文件
+# "请阅读 skills/apple-productivity/SKILL.md，然后帮我创建一个提醒"
+```
+
+### 其他 CLI / 脚本直接调用
+
+不需要 AI Agent，也可以直接在终端使用：
+
+```bash
+# Notes
+./skills/apple-notes/scripts/list-notes.sh
+./skills/apple-notes/scripts/create-note.sh --name "我的笔记" --body "内容"
+
+# Reminders
+./skills/apple-productivity/scripts/create-reminder.sh --name "买咖啡" --due "2026-03-01 09:00"
+./skills/apple-productivity/scripts/list-reminders.sh --status pending
+
+# Calendar
+./skills/apple-productivity/scripts/create-event.sh --title "周会" --start "2026-03-01 14:00" --end "2026-03-01 15:00"
+./skills/apple-productivity/scripts/list-events.sh --date "2026-03-01"
+
+# 跨模块
+./skills/apple-productivity/scripts/sync-view.sh --date "2026-03-01"
+./skills/apple-productivity/scripts/reminder-to-event.sh --name "买咖啡" --duration 30
+```
+
+## 功能模块
+
+### 📝 Apple Notes 模块
+
+受 Notion / Obsidian 启发的结构化笔记工具：
+
+| 功能 | 说明 |
+|------|------|
+| Frontmatter 属性 | YAML 格式页面元数据 |
+| STAR 框架 | 结构化问题分析（Situation / Task / Action / Result） |
+| 8 种 Callout | NOTE / WARNING / TIP / KEY / TODO / SUCCESS / ERROR / QUESTION |
+| 原生复选框 | Apple Notes 风格任务列表 |
+| Markdown → HTML | 自动转换为 Apple Notes 兼容格式 |
+
+```bash
+# 从 Markdown 创建笔记
 echo "# 标题
 
 > [!NOTE] 重要说明
+> 这是一条说明
 " | ./scripts/note-with-style.sh --name "我的笔记"
 
 # 从文件创建
 ./scripts/note-with-style.sh --name "项目总结" --file "summary.md"
 
-# 更新笔记
+# 更新现有笔记
 ./scripts/note-with-style.sh --name "项目总结" --file "summary.md" --update
 ```
 
-详细文档：[skills/apple-notes/README.md](./skills/apple-notes/README.md)
+### ✅ Apple Productivity 模块（Reminders + Calendar）
 
-### ✅ Apple Productivity 模块 (Reminders + Calendar)
-
-完整的 Apple Reminders 和 Calendar 集成工具，支持：
-
-- **任务管理** - 创建/读取/更新/删除/完成任务
-- **日程管理** - 创建/读取/更新/删除日历事件
-- **自然语言解析** - "明天下午 3 点开会"自动解析时间
-- **空闲时间查询** - 查找可用的会议时间段
-- **跨模块整合** - 任务↔日程双向转换，同步视图
-
-#### 快速开始
-
-```bash
-cd skills/apple-productivity
-
-# 创建任务
-./scripts/create-reminder.sh --name "完成项目报告" --due "2026-02-28 15:00" --priority 2
-
-# 创建事件
-./scripts/create-event.sh --title "项目会议" --start "2026-02-28 14:00" --end "2026-02-28 15:00" --location "办公室"
-
-# 同步视图（查看某天的任务和事件）
-./scripts/sync-view.sh --date "2026-02-28"
-
-# 任务转日程
-./scripts/reminder-to-event.sh --name "完成项目报告" --duration 60
-
-# 日程转任务（创建会前准备和会后跟进任务）
-./scripts/event-to-reminder.sh --title "项目会议" --create-prep-task --create-followup-task
-```
-
-详细文档：[skills/apple-productivity/SKILL.md](./skills/apple-productivity/SKILL.md)
-
-### 🚧 规划中模块
-
-#### 跨模块整合增强
-- Notes ↔ Reminders 双向链接
-- 会议记录自动创建任务
-- 对话内容自动归档
+| 功能 | 脚本 |
+|------|------|
+| 创建任务 | `create-reminder.sh --name "名称" --due "时间" --priority 2` |
+| 列出任务 | `list-reminders.sh [--status pending\|completed]` |
+| 完成任务 | `complete-reminder.sh --name "名称" --toggle` |
+| 搜索任务 | `search-reminders.sh --query "关键词"` |
+| 创建事件 | `create-event.sh --title "标题" --start "时间" --end "时间"` |
+| 列出事件 | `list-events.sh --date "日期" [--range week\|month]` |
+| 查找空闲 | `find-free-time.sh --date "日期" --duration 60` |
+| 任务→事件 | `reminder-to-event.sh --name "名称" --duration 60` |
+| 事件→任务 | `event-to-reminder.sh --title "标题" --create-prep-task` |
+| 同步视图 | `sync-view.sh --date "日期"` |
 
 ## 项目结构
 
 ```
 apple-cowork/
-├── scripts/           # 可执行脚本
-│   ├── md-to-notes-html.py    # Markdown → Apple Notes HTML 转换器
-│   ├── note-with-style.sh     # 主脚本（完整样式）
-│   ├── note-from-markdown.sh  # 简化版 Markdown 转笔记
-│   ├── create-note.sh         # 创建纯文本笔记
-│   ├── update-note.sh         # 更新现有笔记
-│   └── search-notes.sh        # 搜索笔记
-├── src/               # 源代码（未来 Python 模块）
-├── templates/         # 笔记模板
-├── docs/              # 详细文档
-├── README.md          # 项目说明
-└── package.json       # 项目配置
+├── scripts/                         # 顶层快捷脚本（Notes）
+│   ├── note-with-style.sh           # 主脚本（Markdown → HTML 笔记）
+│   ├── md-to-notes-html.py          # Markdown → Apple Notes HTML 转换器
+│   ├── create-note.sh               # 创建纯文本笔记
+│   ├── update-note.sh               # 更新笔记
+│   ├── list-notes.sh                # 列出笔记
+│   ├── get-note.sh                  # 获取笔记内容
+│   └── search-notes.sh              # 搜索笔记
+├── skills/
+│   ├── apple-notes/                 # Notes 模块
+│   │   ├── SKILL.md                 # AI Agent 技能描述
+│   │   ├── scripts/                 # 完整脚本集（12 个）
+│   │   └── templates/               # 笔记模板
+│   └── apple-productivity/          # Productivity 模块
+│       ├── SKILL.md                 # AI Agent 技能描述
+│       ├── scripts/                 # 完整脚本集（17 个）
+│       ├── templates/               # 任务/事件模板
+│       └── .local.example.md        # 配置模板
+├── templates/                       # 通用笔记模板
+│   ├── meeting-notes.md             # 会议记录模板
+│   ├── project-summary.md           # 项目总结模板
+│   └── bug-analysis.md              # Bug 分析模板
+├── docs/                            # 文档和可视化
+│   ├── architecture-note.html       # 架构图（Apple Notes 版）
+│   ├── apple-cowork-guide.html      # 完整指南（Apple Notes 版）
+│   └── apple-cowork-architecture.html # 架构图（网页版）
+└── README.md
 ```
 
 ## 技术特点
 
-1. **零依赖** - 仅使用 macOS 原生工具（AppleScript、Python3）
-2. **本地优先** - 所有数据存储在本地 Apple 账户
-3. **结构化输出** - 生成 Apple Notes 兼容的 HTML 格式
-4. **可扩展** - 模块化设计，易于添加新功能
+- **零依赖** — 仅使用 macOS 原生工具（AppleScript + Python3）
+- **本地优先** — 所有数据在本地 Apple 账户，无需云服务
+- **结构化输出** — 生成 Apple Notes 兼容的 HTML 格式
+- **跨平台 Agent** — 不绑定任何 AI 平台，通用 shell 脚本接口
 
-## 安装
+## 规划中
 
-```bash
-# 克隆项目
-git clone https://github.com/arctrany/apple-cowork.git
-cd apple-cowork
-
-# 添加脚本到 PATH（可选）
-export PATH="$PWD/scripts:$PATH"
-
-# 安装 Python 依赖
-pip3 install markdown pyyaml
-```
-
-## 配置
-
-在 `~/.claude/plugins/cache/claude-plugins-official/apple-notes/.local.md` 配置默认值：
-
-```markdown
-default_folder: Notes
-default_account: iCloud
-```
-
-## 使用示例
-
-### 项目总结
-
-```markdown
----
-状态：已完成
-负责人：张三
-模块：后端
----
-
-# 项目总结
-
-::: star
-Situation: 系统响应时间慢，用户体验差
-Task: 将 API 响应时间从 500ms 降低到 100ms
-Action: 重构数据库查询，引入 Redis 缓存
-Result: 平均响应时间降至 80ms，转化率提升 15%
-:::
-
-## 核心进展
-
-> [!KEY] 最重要的发现
-> 通过引入缓存层，减少了 90% 的数据库查询
-
-## 待办事项
-
-- [x] 完成性能基准测试
-- [ ] 编写技术文档
-```
-
-### 会议记录
-
-```markdown
----
-会议主题：周会
-日期：2024-12-31
-参会人：张三，李四
----
-
-# 会议记录
-
-## 讨论要点
-
-> [!NOTE] 议题一
-> 讨论内容...
-
-## 行动项
-
-- [ ] 张三 - 完成技术调研
-- [ ] 李四 - 编写文档
-```
-
-## 贡献
-
-欢迎提交 Issue 和 Pull Request！
+- 🔗 Notes ↔ Reminders 双向链接
+- 📝 会议记录自动创建任务
+- 📚 对话内容自动归档到 Notes
 
 ## 许可证
 
