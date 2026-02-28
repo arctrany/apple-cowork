@@ -14,10 +14,10 @@ DEFAULT_DURATION=60
 
 # 解析配置
 if [ -f "$CONFIG_FILE" ]; then
-    DEFAULT_ACCOUNT=$(grep "^default_account:" "$CONFIG_FILE" | sed 's/default_account: *//' | tr -d '"' || echo "iCloud")
-    DEFAULT_CALENDAR=$(grep "^default_calendar:" "$CONFIG_FILE" | sed 's/default_calendar: *//' | tr -d '"' || echo "日历")
-    DEFAULT_REMINDER_LIST=$(grep "^default_reminder_list:" "$CONFIG_FILE" | sed 's/default_reminder_list: *//' | tr -d '"' || echo "提醒事项")
-    DEFAULT_DURATION=$(grep "^default_event_duration:" "$CONFIG_FILE" | sed 's/default_event_duration: *//' || echo "60")
+    DEFAULT_ACCOUNT=$(grep "^default_account:" "$CONFIG_FILE" | sed 's/default_account: *//; s/ *#.*//' | tr -d '"' || echo "iCloud")
+    DEFAULT_CALENDAR=$(grep "^default_calendar:" "$CONFIG_FILE" | sed 's/default_calendar: *//; s/ *#.*//' | tr -d '"' || echo "日历")
+    DEFAULT_REMINDER_LIST=$(grep "^default_reminder_list:" "$CONFIG_FILE" | sed 's/default_reminder_list: *//; s/ *#.*//' | tr -d '"' || echo "提醒事项")
+    DEFAULT_DURATION=$(grep "^default_event_duration:" "$CONFIG_FILE" | sed 's/default_event_duration: *//; s/ *#.*//' || echo "60")
 fi
 
 # 参数解析

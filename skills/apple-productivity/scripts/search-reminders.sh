@@ -11,7 +11,7 @@ DEFAULT_ACCOUNT="iCloud"
 
 # 解析配置
 if [ -f "$CONFIG_FILE" ]; then
-    DEFAULT_ACCOUNT=$(grep "^default_account:" "$CONFIG_FILE" | sed 's/default_account: *//' | tr -d '"' || echo "iCloud")
+    DEFAULT_ACCOUNT=$(grep "^default_account:" "$CONFIG_FILE" | sed 's/default_account: *//; s/ *#.*//' | tr -d '"' || echo "iCloud")
 fi
 
 # 参数解析

@@ -13,9 +13,9 @@ DEFAULT_PRIORITY=0
 
 # 解析配置
 if [ -f "$CONFIG_FILE" ]; then
-    DEFAULT_ACCOUNT=$(grep "^default_account:" "$CONFIG_FILE" | sed 's/default_account: *//' | tr -d '"' || echo "iCloud")
-    DEFAULT_LIST=$(grep "^default_reminder_list:" "$CONFIG_FILE" | sed 's/default_reminder_list: *//' | tr -d '"' || echo "提醒事项")
-    DEFAULT_PRIORITY=$(grep "^default_reminder_priority:" "$CONFIG_FILE" | sed 's/default_reminder_priority: *//' || echo "0")
+    DEFAULT_ACCOUNT=$(grep "^default_account:" "$CONFIG_FILE" | sed 's/default_account: *//; s/ *#.*//' | tr -d '"' || echo "iCloud")
+    DEFAULT_LIST=$(grep "^default_reminder_list:" "$CONFIG_FILE" | sed 's/default_reminder_list: *//; s/ *#.*//' | tr -d '"' || echo "提醒事项")
+    DEFAULT_PRIORITY=$(grep "^default_reminder_priority:" "$CONFIG_FILE" | sed 's/default_reminder_priority: *//; s/ *#.*//' || echo "0")
 fi
 
 # 参数解析
