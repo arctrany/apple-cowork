@@ -1,0 +1,19 @@
+{
+  "name": "apple-cowork",
+  "version": "0.1.0",
+  "description": "AI + Apple 生态互通方案 — 整合 Apple Notes、Reminders、Calendar",
+  "author": {
+    "name": "Arctrany",
+    "url": "https://github.com/arctrany"
+  },
+  "repository": "https://github.com/arctrany/apple-cowork",
+  "license": "MIT",
+  "keywords": [
+    "apple-notes",
+    "apple-reminders",
+    "apple-calendar",
+    "productivity",
+    "applescript",
+    "macos"
+  ]
+}

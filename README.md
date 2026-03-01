@@ -2,6 +2,17 @@
 
 > AI + Apple 生态互通方案 — 让任何 AI Code Agent 无缝操作 Apple Notes、Reminders、Calendar
 
+## 工作原理
+
+```
+┌─────────────────┐     自然语言      ┌──────────────┐     bash 调用      ┌──────────────┐     AppleScript     ┌───────────────┐
+│   AI Agent      │ ──────────────▶  │  SKILL.md    │ ──────────────▶  │  Shell 脚本   │ ──────────────▶   │  macOS 原生应用 │
+│ (Claude Code /  │                  │  (技能描述)   │                  │  (scripts/)  │                   │  Notes /       │
+│  Cursor / CLI)  │ ◀──────────────  │              │ ◀──────────────  │              │ ◀──────────────   │  Reminders /   │
+└─────────────────┘   结构化结果      └──────────────┘   stdout 输出      └──────────────┘   osascript 返回    │  Calendar      │
+                                                                                                          └───────────────┘
+```
+
 **核心原理：** 所有功能通过标准 shell 脚本 + AppleScript 实现，不依赖任何特定 AI 平台 API。只要你的 AI 工具能执行 bash 命令，就能使用全部功能。
 
 ## 安装
@@ -22,7 +33,6 @@ cd apple-cowork
 ### 步骤 2：授权脚本执行
 
 ```bash
-chmod +x scripts/*.sh
 chmod +x skills/apple-notes/scripts/*.sh
 chmod +x skills/apple-productivity/scripts/*.sh
 ```
@@ -66,7 +76,7 @@ default_event_duration: 60     # 默认事件时长（分钟）
 
 ## 使用方式
 
-### Claude Code
+### Claude Code（推荐）
 
 在 apple-cowork 目录下启动 Claude Code，`skills/` 目录会自动加载：
 
@@ -155,12 +165,78 @@ cp -r /path/to/apple-cowork/skills /path/to/your-project/skills
 | 事件→任务 | `event-to-reminder.sh --title "标题" --create-prep-task` |
 | 同步视图 | `sync-view.sh --date "日期"` |
 
+## 项目结构
+
+```
+apple-cowork/
+├── .claude-plugin/
+│   └── plugin.json          # Claude Code 插件清单
+├── skills/
+│   ├── apple-notes/         # Notes 模块
+│   │   ├── SKILL.md         # 技能描述（AI Agent 自动加载）
+│   │   ├── scripts/         # Shell 脚本
+│   │   ├── templates/       # 笔记模板
+│   │   ├── references/      # AppleScript 参考和指南
+│   │   └── .local.example.md
+│   └── apple-productivity/  # Reminders + Calendar 模块
+│       ├── SKILL.md         # 技能描述
+│       ├── scripts/         # Shell 脚本
+│       ├── templates/       # 事件/任务模板
+│       ├── references/      # AppleScript 参考
+│       └── .local.example.md
+└── docs/                    # 设计文档和架构图
+```
+
 ## 技术特点
 
 - **零依赖** — 仅使用 macOS 原生工具（AppleScript + Python3）
 - **本地优先** — 所有数据在本地 Apple 账户，无需云服务
 - **结构化输出** — 生成 Apple Notes 兼容的 HTML 格式
 - **跨平台 Agent** — 不绑定任何 AI 平台，通用 shell 脚本接口
+
+## 故障排除
+
+### 权限被拒绝
+
+**症状：** 脚本执行后报错 `Not authorized to send Apple events`
+
+**解决方法：**
+1. 打开 **系统设置** → **隐私与安全性**
+2. 在「备忘录」「提醒事项」「日历」中勾选你的终端应用（Terminal / iTerm2 / Warp 等）
+3. 如果使用 Claude Code，需要勾选 Claude Code 对应的终端
+4. 修改后可能需要重启终端
+
+### 账户名不匹配
+
+**症状：** 脚本报错 `Account not found` 或返回空结果
+
+**解决方法：**
+1. 运行以下命令查看系统中的实际账户名：
+   ```bash
+   osascript -e 'tell application "Notes" to get name of every account'
+   osascript -e 'tell application "Reminders" to get name of every account'
+   ```
+2. 将返回的账户名填入 `.local.md` 配置文件
+3. 注意：中文系统的账户名可能是「iCloud」而非 "iCloud"
+
+### Python 依赖缺失
+
+**症状：** `note-from-markdown.sh` 报错 `ModuleNotFoundError: No module named 'markdown'`
+
+**解决方法：**
+```bash
+pip3 install markdown pyyaml
+```
+
+### 脚本无执行权限
+
+**症状：** `Permission denied` 错误
+
+**解决方法：**
+```bash
+chmod +x skills/apple-notes/scripts/*.sh
+chmod +x skills/apple-productivity/scripts/*.sh
+```
 
 ## 许可证
 

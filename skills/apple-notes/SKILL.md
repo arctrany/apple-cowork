@@ -1,104 +1,110 @@
 ---
 name: apple-notes
-description: This skill should be used when the user asks to "read my notes", "list notes", "search notes", "create a note", "update a note", "get note content", or mentions Apple Notes access. Provides AppleScript-based Apple Notes integration for any CLI tool.
+description: 当用户提到「读取笔记」「列出笔记」「搜索笔记」「创建笔记」「更新笔记」「获取笔记内容」或提及 Apple Notes / 备忘录时使用此技能。通过 AppleScript 提供 Apple Notes 集成，适用于任何 CLI 工具。
 version: 0.1.0
 ---
 
-# Apple Notes Integration Skill
+# Apple Notes 集成技能
 
-## Purpose
+## 用途
 
-Provide seamless access to Apple Notes on macOS using AppleScript. This skill enables any CLI tool (Claude Code, iflow, qwen, gemini, etc.) to read, search, create, and update notes in the Apple Notes application.
+在 macOS 上通过 AppleScript 无缝访问 Apple Notes（备忘录）。此技能使任何 CLI 工具（Claude Code、Cursor、Windsurf 等）都能读取、搜索、创建和更新笔记。
 
-## Available Commands
+## 可用命令
 
-All commands are executed via the scripts in `scripts/`:
+所有命令通过 `scripts/` 目录下的脚本执行：
 
-| Command | Description |
-|---------|-------------|
-| `scripts/list-notes.sh` | List all notes in a folder/account |
-| `scripts/get-note.sh` | Get full content of a specific note |
-| `scripts/search-notes.sh` | Search notes by keyword |
-| `scripts/create-note.sh` | Create a new note |
-| `scripts/update-note.sh` | Update an existing note |
+| 命令 | 描述 |
+|------|------|
+| `scripts/list-notes.sh` | 列出文件夹/账户中的所有笔记 |
+| `scripts/get-note.sh` | 获取指定笔记的完整内容 |
+| `scripts/search-notes.sh` | 按关键词搜索笔记 |
+| `scripts/create-note.sh` | 创建新笔记 |
+| `scripts/update-note.sh` | 更新已有笔记 |
+| `scripts/get-all-notes.sh` | 获取所有笔记概览 |
+| `scripts/note-from-markdown.sh` | 从 Markdown 文件创建笔记 |
+| `scripts/note-with-style.sh` | 创建带样式的笔记 |
+| `scripts/md-to-notes-html.py` | Markdown 转 Apple Notes HTML |
 
-## Configuration
+## 配置
 
-Load configuration from `.local.md` file:
+从 `.local.md` 文件加载配置：
 
 ```yaml
-default_account: 谷歌
+default_account: iCloud
 default_folder: Notes
 ```
 
-## Usage Patterns
+## 使用示例
 
-### List Notes
+### 列出笔记
 
 ```bash
 scripts/list-notes.sh [--account "账户名"] [--folder "文件夹名"]
 ```
 
-### Get Note Content
+### 获取笔记内容
 
 ```bash
 scripts/get-note.sh --name "笔记名称" [--account "账户名"] [--folder "文件夹名"]
 ```
 
-### Search Notes
+### 搜索笔记
 
 ```bash
 scripts/search-notes.sh --query "关键词" [--account "账户名"]
 ```
 
-### Create Note
+### 创建笔记
 
 ```bash
 scripts/create-note.sh --name "笔记名称" --body "笔记内容" [--folder "文件夹名"]
 ```
 
-### Update Note
+### 更新笔记
 
 ```bash
 scripts/update-note.sh --name "笔记名称" --body "新内容"
 ```
 
-## AppleScript Reference
+## AppleScript 参考
 
-For custom queries, use these AppleScript patterns:
+如需自定义查询，使用以下 AppleScript 模式：
 
 ```applescript
--- Get all accounts
+-- 获取所有账户
 tell application "Notes" to get name of every account
 
--- Get all folders in account
+-- 获取账户下所有文件夹
 tell application "Notes" to get name of every folder of account "账户名"
 
--- Get all notes in folder
+-- 获取文件夹下所有笔记
 tell application "Notes" to get name of every note of folder "文件夹名" of account "账户名"
 
--- Get note body
+-- 获取笔记内容
 tell application "Notes" to get body of note "笔记名" of folder "文件夹名" of account "账户名"
 ```
 
-## Additional Resources
+## 补充资源
 
-- **`references/applescript-guide.md`** - Detailed AppleScript patterns and examples
-- **`scripts/`** - Executable shell scripts for common operations
+- **`references/applescript-guide.md`** — AppleScript 详细模式和示例
+- **`references/`** — 笔记本管理指南和演示文档
+- **`templates/`** — 项目总结、会议记录、Bug 分析模板
+- **`scripts/`** — 可执行的 shell 脚本
 
-## Cross-CLI Usage
+## 跨 CLI 使用
 
-This skill is designed to work with any CLI that can:
-1. Execute shell scripts
-2. Read configuration from `.local.md` files
+此技能适用于任何可以执行 shell 脚本的 CLI 工具。
 
-### For Claude Code
-Scripts are automatically available via Bash tool.
+### Claude Code
 
-### For Other CLIs (iflow, qwen, gemini)
-Copy the `scripts/` directory and call scripts directly:
+脚本通过 Bash 工具自动可用。
+
+### 其他 CLI（Cursor、Windsurf、Cline）
+
+复制 `scripts/` 目录并直接调用：
 
 ```bash
 ./scripts/list-notes.sh
-./scripts/get-note.sh --name "my note"
+./scripts/get-note.sh --name "我的笔记"
 ```
