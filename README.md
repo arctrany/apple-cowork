@@ -23,21 +23,27 @@
 - Python 3（macOS 自带）
 - `pip3 install markdown pyyaml`（仅 Notes 的 Markdown 转换需要）
 
-### 步骤 1：克隆仓库
+### 快速安装（推荐）
 
 ```bash
 git clone https://github.com/arctrany/apple-cowork.git
 cd apple-cowork
+./install.sh --project ~/your-project
 ```
 
-### 步骤 2：授权脚本执行
+安装脚本会自动完成：授权脚本执行、创建 symlink 到目标项目、初始化配置模板。
+
+### 手动安装
 
 ```bash
+git clone https://github.com/arctrany/apple-cowork.git
+cd apple-cowork
 chmod +x skills/apple-notes/scripts/*.sh
 chmod +x skills/apple-productivity/scripts/*.sh
+cp -r skills /path/to/your-project/skills
 ```
 
-### 步骤 3：macOS 权限设置
+### macOS 权限设置
 
 首次运行脚本时，macOS 会弹出权限请求。你也可以提前在系统设置中授权：
 
@@ -45,7 +51,7 @@ chmod +x skills/apple-productivity/scripts/*.sh
 2. **系统设置** → 隐私与安全性 → **提醒事项** → 勾选终端
 3. **系统设置** → 隐私与安全性 → **日历** → 勾选终端
 
-### 步骤 4：配置默认账户（可选）
+### 配置默认账户（可选）
 
 两个模块各有独立的配置文件，复制模板后编辑即可：
 
@@ -90,11 +96,7 @@ claude
 # "创建一篇笔记，记录今天的会议要点"
 ```
 
-如果要在其他项目中使用，复制 `skills/` 目录到你的项目根目录：
-
-```bash
-cp -r /path/to/apple-cowork/skills /path/to/your-project/skills
-```
+如果要在其他项目中使用，运行 `./install.sh --project ~/your-project` 或手动复制 `skills/` 目录。
 
 ### Cursor / Windsurf / Cline
 
@@ -169,6 +171,8 @@ cp -r /path/to/apple-cowork/skills /path/to/your-project/skills
 
 ```
 apple-cowork/
+├── install.sh               # 一键安装（symlink 到目标项目）
+├── uninstall.sh             # 卸载
 ├── .claude-plugin/
 │   └── plugin.json          # Claude Code 插件清单
 ├── skills/
@@ -193,6 +197,12 @@ apple-cowork/
 - **本地优先** — 所有数据在本地 Apple 账户，无需云服务
 - **结构化输出** — 生成 Apple Notes 兼容的 HTML 格式
 - **跨平台 Agent** — 不绑定任何 AI 平台，通用 shell 脚本接口
+
+## 卸载
+
+```bash
+./uninstall.sh --project ~/your-project
+```
 
 ## 故障排除
 
