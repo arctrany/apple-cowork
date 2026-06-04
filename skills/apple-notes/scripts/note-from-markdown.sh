@@ -6,6 +6,7 @@ set -e
 
 NOTE_NAME=""
 NOTE_BODY=""
+ACCOUNT=""
 FOLDER=""
 UPDATE=false
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -15,6 +16,7 @@ while [[ $# -gt 0 ]]; do
     case $1 in
         --name)   NOTE_NAME="$2"; shift 2 ;;
         --body)   NOTE_BODY="$2"; shift 2 ;;
+        --account) ACCOUNT="$2";  shift 2 ;;
         --folder) FOLDER="$2";    shift 2 ;;
         --update) UPDATE=true;    shift   ;;
         *)        echo "Unknown option: $1"; exit 1 ;;
@@ -26,9 +28,15 @@ if [[ -z "$NOTE_BODY" ]]; then echo "Error: --body is required"; exit 1; fi
 
 # Load config
 CONFIG_FILE="$SCRIPT_DIR/../.local.md"
-if [[ -f "$CONFIG_FILE" && -z "$FOLDER" ]]; then
-    FOLDER=$(grep "^default_folder:" "$CONFIG_FILE" | sed 's/default_folder: *//')
+if [[ -f "$CONFIG_FILE" ]]; then
+    if [[ -z "$ACCOUNT" ]]; then
+        ACCOUNT=$(grep "^default_account:" "$CONFIG_FILE" | sed 's/default_account: *//' | sed 's/[[:space:]]*#.*$//')
+    fi
+    if [[ -z "$FOLDER" ]]; then
+        FOLDER=$(grep "^default_folder:" "$CONFIG_FILE" | sed 's/default_folder: *//' | sed 's/[[:space:]]*#.*$//')
+    fi
 fi
+ACCOUNT=${ACCOUNT:-"iCloud"}
 FOLDER=${FOLDER:-"Notes"}
 
 # Convert Markdown → Apple Notes HTML
@@ -41,11 +49,13 @@ if $UPDATE; then
     # Update existing note
     osascript <<EOF
 tell application "Notes"
+    set accountName to "$ACCOUNT"
     set folderName to "$FOLDER"
     set noteName to "$NOTE_NAME"
     set noteBody to do shell script "cat '$HTML_TEMP'"
     try
-        set existingNote to note noteName of folder folderName
+        set targetFolder to folder folderName of account accountName
+        set existingNote to note noteName of targetFolder
         set body of existingNote to noteBody
         log "Note updated: " & (name of existingNote)
     on error errMsg
@@ -58,11 +68,13 @@ else
     # Create new note
     osascript <<EOF
 tell application "Notes"
+    set accountName to "$ACCOUNT"
     set folderName to "$FOLDER"
     set noteName to "$NOTE_NAME"
     set noteBody to do shell script "cat '$HTML_TEMP'"
     try
-        set newNote to make new note at folder folderName with properties {name: noteName, body: noteBody}
+        set targetFolder to folder folderName of account accountName
+        set newNote to make new note at targetFolder with properties {name: noteName, body: noteBody}
         log "Note created: " & (name of newNote)
     on error errMsg
         log "Error: " & errMsg

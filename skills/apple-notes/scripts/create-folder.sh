@@ -10,7 +10,7 @@
 set -e
 
 FOLDER_PATH=""
-ACCOUNT="iCloud"
+ACCOUNT=""
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -29,6 +29,13 @@ if [[ -z "$FOLDER_PATH" ]]; then
     echo "Usage: create-folder.sh \"路径/到/文件夹\" [--account \"iCloud\"]"
     exit 1
 fi
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CONFIG_FILE="$SCRIPT_DIR/../.local.md"
+if [[ -f "$CONFIG_FILE" && -z "$ACCOUNT" ]]; then
+    ACCOUNT=$(grep "^default_account:" "$CONFIG_FILE" | sed 's/default_account: *//' | sed 's/[[:space:]]*#.*$//')
+fi
+ACCOUNT=${ACCOUNT:-"iCloud"}
 
 # Split folder path into parts
 IFS='/' read -ra FOLDER_PARTS <<< "$FOLDER_PATH"

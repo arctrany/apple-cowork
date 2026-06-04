@@ -41,6 +41,7 @@ set -e
 NOTE_NAME=""
 NOTE_FILE=""
 NOTE_BODY=""
+ACCOUNT=""
 FOLDER=""
 TAGS=""
 STATUS=""
@@ -56,6 +57,7 @@ while [[ $# -gt 0 ]]; do
         --name)     NOTE_NAME="$2"; shift 2 ;;
         --file)     NOTE_FILE="$2"; shift 2 ;;
         --body)     NOTE_BODY="$2"; shift 2 ;;
+        --account)  ACCOUNT="$2";   shift 2 ;;
         --folder)   FOLDER="$2";    shift 2 ;;
         --tags)     TAGS="$2";      shift 2 ;;
         --status)   STATUS="$2";    shift 2 ;;
@@ -125,9 +127,15 @@ fi
 
 # Load config
 CONFIG_FILE="$SCRIPT_DIR/../.local.md"
-if [[ -f "$CONFIG_FILE" && -z "$FOLDER" ]]; then
-    FOLDER=$(grep "^default_folder:" "$CONFIG_FILE" | sed 's/default_folder: *//')
+if [[ -f "$CONFIG_FILE" ]]; then
+    if [[ -z "$ACCOUNT" ]]; then
+        ACCOUNT=$(grep "^default_account:" "$CONFIG_FILE" | sed 's/default_account: *//' | sed 's/[[:space:]]*#.*$//')
+    fi
+    if [[ -z "$FOLDER" ]]; then
+        FOLDER=$(grep "^default_folder:" "$CONFIG_FILE" | sed 's/default_folder: *//' | sed 's/[[:space:]]*#.*$//')
+    fi
 fi
+ACCOUNT=${ACCOUNT:-"iCloud"}
 FOLDER=${FOLDER:-"Notes"}
 
 # Convert Markdown → Apple Notes HTML
@@ -136,12 +144,14 @@ printf '%s' "$NOTE_BODY" | python3 "$MD_CONVERTER" > "$HTML_TEMP"
 
 osascript <<EOF
 tell application "Notes"
+    set accountName to "$ACCOUNT"
     set folderName to "$FOLDER"
     set noteName to "$NOTE_NAME"
     set noteBody to do shell script "cat '$HTML_TEMP'"
 
     try
-        set existingNote to note noteName of folder folderName
+        set targetFolder to folder folderName of account accountName
+        set existingNote to note noteName of targetFolder
         if $UPDATE then
             set body of existingNote to noteBody
             log "Note updated: " & (name of existingNote)
@@ -149,7 +159,7 @@ tell application "Notes"
             -- Create new note with unique name
             set timestamp to do shell script "date +%Y%m%d_%H%M%S"
             set newName to noteName & " " & timestamp
-            set newNote to make new note at folder folderName with properties {name: newName, body: noteBody}
+            set newNote to make new note at targetFolder with properties {name: newName, body: noteBody}
             log "Note created: " & (name of newNote)
         end if
     on error errMsg
@@ -158,9 +168,10 @@ tell application "Notes"
             error 1
         else
             -- Try creating with unique name
+            set targetFolder to folder folderName of account accountName
             set timestamp to do shell script "date +%Y%m%d_%H%M%S"
             set newName to noteName & " " & timestamp
-            set newNote to make new note at folder folderName with properties {name: newName, body: noteBody}
+            set newNote to make new note at targetFolder with properties {name: newName, body: noteBody}
             log "Note created: " & (name of newNote)
         end if
     end try

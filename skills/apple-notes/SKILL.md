@@ -58,13 +58,13 @@ scripts/search-notes.sh --query "关键词" [--account "账户名"]
 ### 创建笔记
 
 ```bash
-scripts/create-note.sh --name "笔记名称" --body "笔记内容" [--folder "文件夹名"]
+scripts/create-note.sh --name "笔记名称" --body "笔记内容" [--account "账户名"] [--folder "文件夹名"]
 ```
 
 ### 更新笔记
 
 ```bash
-scripts/update-note.sh --name "笔记名称" --body "新内容"
+scripts/update-note.sh --name "笔记名称" --body "新内容" [--account "账户名"] [--folder "文件夹名"]
 ```
 
 ## AppleScript 参考
