@@ -63,9 +63,14 @@ fn handle_request(request: Request) -> Response {
         Request::GetLogs {
             task_id,
             tail,
+            offset,
             follow: _,
-        } => match task::get_logs(&task_id, tail) {
-            Ok(data) => Response::LogChunk { task_id, data },
+        } => match task::get_logs(&task_id, tail, offset) {
+            Ok((data, next_offset)) => Response::LogChunk {
+                task_id,
+                data,
+                next_offset,
+            },
             Err(e) => Response::Error {
                 message: format!("failed to get logs: {e}"),
             },

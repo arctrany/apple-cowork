@@ -143,26 +143,47 @@ pub fn get_status(task_id: &TaskId) -> Result<(TaskState, Option<i32>, Option<u3
 }
 
 /// Read log output from a task.
-pub fn get_logs(task_id: &TaskId, tail: Option<usize>) -> Result<String> {
+///
+/// Returns (data, next_offset) where next_offset is the byte position after
+/// the returned data. Use next_offset in subsequent calls for incremental reads.
+pub fn get_logs(task_id: &TaskId, tail: Option<usize>, offset: Option<u64>) -> Result<(String, u64)> {
     let log_path = tasks_dir()?.join(task_id.as_str()).join("output.log");
     if !log_path.exists() {
-        return Ok(String::new());
+        return Ok((String::new(), 0));
     }
 
-    match tail {
-        Some(n) => {
-            // Read last N lines
-            let file = fs::File::open(&log_path)?;
-            let reader = BufReader::new(file);
-            let lines: Vec<String> = reader.lines().collect::<Result<Vec<_>, _>>()?;
-            let start = lines.len().saturating_sub(n);
-            Ok(lines[start..].join("\n"))
+    // If offset is specified, read from that byte position (incremental mode)
+    if let Some(byte_offset) = offset {
+        use std::io::{Read, Seek, SeekFrom};
+        let mut file = fs::File::open(&log_path)?;
+        let file_size = file.metadata()?.len();
+
+        if byte_offset >= file_size {
+            // No new data
+            return Ok((String::new(), file_size));
         }
-        None => {
-            // Read entire log
-            Ok(fs::read_to_string(&log_path)?)
-        }
+
+        file.seek(SeekFrom::Start(byte_offset))?;
+        let mut buf = String::new();
+        file.read_to_string(&mut buf)?;
+        let new_offset = byte_offset + buf.len() as u64;
+        return Ok((buf, new_offset));
     }
+
+    // Tail mode: read last N lines
+    if let Some(n) = tail {
+        let file = fs::File::open(&log_path)?;
+        let file_size = file.metadata()?.len();
+        let reader = BufReader::new(file);
+        let lines: Vec<String> = reader.lines().collect::<Result<Vec<_>, _>>()?;
+        let start = lines.len().saturating_sub(n);
+        return Ok((lines[start..].join("\n"), file_size));
+    }
+
+    // Default: read entire log
+    let data = fs::read_to_string(&log_path)?;
+    let size = data.len() as u64;
+    Ok((data, size))
 }
 
 /// List all tasks on this node.

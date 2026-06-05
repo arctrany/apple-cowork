@@ -35,7 +35,10 @@ pub enum Request {
         /// Number of lines from the end to retrieve. None = all lines.
         #[serde(default)]
         tail: Option<usize>,
-        /// If true, stream new log lines as they appear.
+        /// Byte offset to start reading from (for incremental follow).
+        #[serde(default)]
+        offset: Option<u64>,
+        /// If true, this is a follow-mode request (client will poll).
         #[serde(default)]
         follow: bool,
     },
@@ -76,7 +79,13 @@ pub enum Response {
 
     /// A chunk of log output.
     #[serde(rename = "log_chunk")]
-    LogChunk { task_id: TaskId, data: String },
+    LogChunk {
+        task_id: TaskId,
+        data: String,
+        /// Byte offset after this chunk (for next incremental fetch).
+        #[serde(default)]
+        next_offset: u64,
+    },
 
     /// List of all tasks on this node.
     #[serde(rename = "task_list")]

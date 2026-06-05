@@ -50,17 +50,30 @@ pub fn execute(
             eprintln!("✅ Task started: {}", task_id);
             eprintln!();
 
-            // Step 3: Stream logs (initial fetch)
-            let log_request = Request::GetLogs {
-                task_id: task_id.clone(),
-                tail: None,
-                follow: false,
-            };
+            // Stream logs incrementally while polling for completion
+            let mut offset: u64 = 0;
 
-            // Poll for completion in a simple loop
             loop {
-                std::thread::sleep(std::time::Duration::from_secs(1));
+                std::thread::sleep(std::time::Duration::from_millis(500));
 
+                // Fetch new log output since last offset
+                let log_request = Request::GetLogs {
+                    task_id: task_id.clone(),
+                    tail: None,
+                    offset: Some(offset),
+                    follow: true,
+                };
+                let mut log_session = SshSession::new(node_config)?;
+                if let Response::LogChunk { data, next_offset, .. } =
+                    log_session.send_request(&log_request)?
+                {
+                    if !data.is_empty() {
+                        print!("{data}");
+                        offset = next_offset;
+                    }
+                }
+
+                // Check task status
                 let mut check_session = SshSession::new(node_config)?;
                 let status_resp = check_session.send_request(&Request::GetStatus {
                     task_id: task_id.clone(),
@@ -76,23 +89,37 @@ pub fn execute(
                         match state {
                             TaskState::Running => continue,
                             TaskState::Completed => {
-                                // Fetch final logs
-                                let mut log_session = SshSession::new(node_config)?;
+                                // Drain any remaining output
+                                let mut final_session = SshSession::new(node_config)?;
                                 if let Response::LogChunk { data, .. } =
-                                    log_session.send_request(&log_request)?
+                                    final_session.send_request(&Request::GetLogs {
+                                        task_id: task_id.clone(),
+                                        tail: None,
+                                        offset: Some(offset),
+                                        follow: false,
+                                    })?
                                 {
-                                    print!("{data}");
+                                    if !data.is_empty() {
+                                        print!("{data}");
+                                    }
                                 }
                                 eprintln!("\n✅ Task completed (exit code: 0)");
                                 return Ok(());
                             }
                             TaskState::Failed | TaskState::Killed => {
-                                // Fetch logs
-                                let mut log_session = SshSession::new(node_config)?;
+                                // Drain remaining output
+                                let mut final_session = SshSession::new(node_config)?;
                                 if let Response::LogChunk { data, .. } =
-                                    log_session.send_request(&log_request)?
+                                    final_session.send_request(&Request::GetLogs {
+                                        task_id: task_id.clone(),
+                                        tail: None,
+                                        offset: Some(offset),
+                                        follow: false,
+                                    })?
                                 {
-                                    print!("{data}");
+                                    if !data.is_empty() {
+                                        print!("{data}");
+                                    }
                                 }
                                 let code = exit_code.unwrap_or(-1);
                                 eprintln!("\n❌ Task failed (exit code: {})", code);
