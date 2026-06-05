@@ -39,3 +39,7 @@ wheels/
 # Temp files
 *.tmp
 *.temp
+
+# Rust
+target/
+*.rlib

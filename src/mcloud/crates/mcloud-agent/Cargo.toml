@@ -1,0 +1,18 @@
+[package]
+name = "mcloud-agent"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "mcloud remote agent daemon — task execution, power management, and workspace management"
+
+[[bin]]
+name = "mcloud-agent"
+path = "src/main.rs"
+
+[dependencies]
+mcloud-common = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+chrono = { workspace = true }
+nix = { workspace = true }

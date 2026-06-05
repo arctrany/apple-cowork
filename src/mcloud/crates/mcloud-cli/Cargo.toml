@@ -1,0 +1,19 @@
+[package]
+name = "mcloud-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "mcloud client CLI — offload compute tasks to remote Apple Silicon nodes"
+
+[[bin]]
+name = "mcloud"
+path = "src/main.rs"
+
+[dependencies]
+mcloud-common = { workspace = true }
+clap = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+toml = { workspace = true }
+anyhow = { workspace = true }
+chrono = { workspace = true }

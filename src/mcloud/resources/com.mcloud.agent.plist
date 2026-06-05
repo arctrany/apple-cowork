@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.mcloud.agent</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/local/bin/mcloud-agent</string>
+    </array>
+
+    <!-- Start on login and keep alive -->
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+
+    <!-- Logging -->
+    <key>StandardOutPath</key>
+    <string>/Users/__USER__/.mcloud/agent.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/__USER__/.mcloud/agent.err</string>
+
+    <!-- Resource limits (keep it lightweight) -->
+    <key>ProcessType</key>
+    <string>Background</string>
+
+    <!-- Restart on crash with a 5-second delay -->
+    <key>ThrottleInterval</key>
+    <integer>5</integer>
+</dict>
+</plist>
