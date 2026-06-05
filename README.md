@@ -1,6 +1,6 @@
 # Apple Cowork
 
-> AI + Apple 生态互通方案 — 让任何 AI Code Agent 无缝操作 Apple Notes、Reminders、Calendar
+> Apple 生态开发者工具集 — AI Agent 互通 + 闲置 Apple Silicon 算力卸载
 
 ## 工作原理
 
@@ -171,24 +171,19 @@ claude
 
 ```
 apple-cowork/
-├── install.sh               # 一键安装（symlink 到目标项目）
-├── uninstall.sh             # 卸载
-├── .claude-plugin/
-│   └── plugin.json          # Claude Code 插件清单
+├── install.sh               # Skills 一键安装
+├── uninstall.sh             # Skills 卸载
 ├── skills/
-│   ├── apple-notes/         # Notes 模块
-│   │   ├── SKILL.md         # 技能描述（AI Agent 自动加载）
-│   │   ├── scripts/         # Shell 脚本
-│   │   ├── templates/       # 笔记模板
-│   │   ├── references/      # AppleScript 参考和指南
-│   │   └── .local.example.md
+│   ├── apple-notes/         # Notes 模块 (AppleScript)
 │   └── apple-productivity/  # Reminders + Calendar 模块
-│       ├── SKILL.md         # 技能描述
-│       ├── scripts/         # Shell 脚本
-│       ├── templates/       # 事件/任务模板
-│       ├── references/      # AppleScript 参考
-│       └── .local.example.md
-└── docs/                    # 设计文档和架构图
+├── src/mcloud/              # mcloud 计算卸载工具 (Rust)
+│   ├── crates/
+│   │   ├── mcloud-cli/      # 客户端 CLI → `mcloud` (1.6MB)
+│   │   ├── mcloud-agent/    # 远程守护进程 → `mcloud-agent` (883KB)
+│   │   └── mcloud-common/   # 共享协议和类型
+│   ├── scripts/             # pmset 配置 / agent 安装脚本
+│   └── resources/           # launchd plist 模板
+└── docs/                    # 设计文档
 ```
 
 ## 技术特点
@@ -251,3 +246,93 @@ chmod +x skills/apple-productivity/scripts/*.sh
 ## 许可证
 
 MIT License
+
+---
+
+## mcloud — Apple Silicon 算力卸载
+
+> 将闲置 Mac Mini / Mac Studio 变为低功耗无头计算节点，从 MacBook Air 卸载编译任务。
+
+```
+ MacBook Air (客户端)                      Mac Mini (计算节点)
+┌──────────────────┐                     ┌──────────────────┐
+│   mcloud CLI     │── rsync 同步代码 ──▶│   ~/.mcloud/     │
+│   (1.6 MB)       │── SSH JSON 协议 ──▶│   mcloud-agent   │
+│                  │◀── 日志 + 退出码 ──│   (883 KB)       │
+└──────────────────┘                     └──────────────────┘
+           IPv6 公网 / IPv4 / 局域网
+```
+
+### 前置要求
+
+- 两台 macOS 设备（客户端 + 计算节点）
+- SSH 互通（IPv6 公网、局域网、或 Tailscale 均可）
+- Rust 工具链（仅编译时需要）
+
+### 快速开始
+
+```bash
+# 1. 编译
+cd src/mcloud
+cargo build --release
+
+# 2. 安装 CLI 到本地（客户端机器）
+cp target/release/mcloud ~/.local/bin/
+
+# 3. 安装 Agent 到远程计算节点
+scp target/release/mcloud-agent user@your-mac-mini:~/.local/bin/
+
+# 4. 初始化配置
+mcloud init
+# 编辑 ~/.mcloud/config.toml，填入远程节点的 IPv6/IP 和用户名
+
+# 5. 诊断连通性
+mcloud doctor
+
+# 6. 配置计算节点低功耗模式（在远程节点上运行）
+ssh user@your-mac-mini 'sudo bash -s' < src/mcloud/scripts/setup-pmset.sh
+
+# 7. 卸载编译任务
+mcloud run cargo build --release
+```
+
+### 配置文件
+
+`~/.mcloud/config.toml`：
+
+```toml
+[node.mac-mini]
+host = "2001:db8::1"         # IPv6 / IPv4 / hostname
+user = "haowu"
+
+[sync]
+excludes = ["target/", "node_modules/", ".git/"]
+
+[defaults]
+node = "mac-mini"
+```
+
+### 命令一览
+
+| 命令 | 说明 |
+|------|------|
+| `mcloud run <cmd>` | 同步代码 → 远程执行 → 输出日志 |
+| `mcloud run --no-sync <cmd>` | 跳过同步，直接执行 |
+| `mcloud logs <task-id>` | 查看任务日志 |
+| `mcloud status` | 列出远程节点上的所有任务 |
+| `mcloud sync` | 手动同步代码到远程 |
+| `mcloud kill <task-id>` | 终止运行中的任务 |
+| `mcloud info` | 查看节点功耗 / 任务数 / pmset 状态 |
+| `mcloud doctor` | 诊断 IPv6 / SSH / rsync / agent 状态 |
+| `mcloud nodes` | 列出已配置的计算节点 |
+| `mcloud init` | 生成默认配置文件 |
+| `mcloud uninstall` | 卸载本地 mcloud |
+| `mcloud uninstall -n <node>` | 远程卸载计算节点上的 agent |
+
+### 设计亮点
+
+- **极致轻量** — Agent 仅 883KB，运行内存 < 5MB
+- **零服务端** — JSON 协议直接走 SSH stdin/stdout，无需额外端口
+- **断网容错** — 任务在远程后台运行（nohup + caffeinate），断网后重连可追赶日志
+- **低功耗** — M 系列芯片在 "显示器关闭 + CPU 在线" 模式下闲置功耗 ≈ 3W
+- **IPv6 原生** — 支持 IPv6 公网直连，无需 VPN
