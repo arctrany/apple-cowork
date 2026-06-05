@@ -354,6 +354,7 @@ dependencies = [
  "anyhow",
  "chrono",
  "clap",
+ "dirs",
  "mcloud-common",
  "serde",
  "serde_json",

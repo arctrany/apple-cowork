@@ -101,6 +101,20 @@ enum Commands {
 
     /// Generate a default configuration file.
     Init,
+
+    /// Uninstall mcloud from local machine or a remote node.
+    ///
+    /// Without --node: removes local CLI, agent, launchd plist, and data.
+    /// With --node: uninstalls mcloud-agent from the specified remote node via SSH.
+    Uninstall {
+        /// Target node to uninstall from (omit for local uninstall).
+        #[arg(short, long)]
+        node: Option<String>,
+
+        /// Keep task data and config (~/.mcloud/). Default: remove everything.
+        #[arg(long)]
+        keep_data: bool,
+    },
 }
 
 fn main() -> anyhow::Result<()> {
@@ -134,5 +148,9 @@ fn main() -> anyhow::Result<()> {
         Commands::Nodes => commands::nodes::execute(),
 
         Commands::Init => commands::init::execute(),
+
+        Commands::Uninstall { node, keep_data } => {
+            commands::uninstall::execute(node, keep_data)
+        }
     }
 }

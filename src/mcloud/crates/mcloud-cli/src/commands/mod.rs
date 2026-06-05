@@ -7,3 +7,4 @@ pub mod nodes;
 pub mod run;
 pub mod status;
 pub mod sync;
+pub mod uninstall;
