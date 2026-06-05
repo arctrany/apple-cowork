@@ -17,6 +17,10 @@ struct TaskMeta {
 }
 
 /// Spawn a background task, redirect output to log file, and return the TaskId.
+///
+/// The task runs under `caffeinate -dis` to prevent system sleep.
+/// A detached shell wrapper captures the exit code after the command finishes,
+/// so the agent process can exit immediately without losing exit code tracking.
 pub fn run_task(
     command: &str,
     workdir: Option<&str>,
@@ -36,47 +40,37 @@ pub fn run_task(
         None => workspace.clone(),
     };
 
-    // Open log file for stdout+stderr redirection
     let log_path = task_dir.join("output.log");
-    let log_file = fs::File::create(&log_path)
-        .with_context(|| format!("creating log file: {}", log_path.display()))?;
-    let log_err = log_file
-        .try_clone()
-        .context("cloning log file for stderr")?;
+    let exit_code_path = task_dir.join("exit_code");
 
-    // Spawn the task as a background process via /bin/sh
-    let mut cmd = Command::new("/bin/sh");
-    cmd.arg("-c")
-        .arg(command)
-        .current_dir(&cwd)
-        .stdout(Stdio::from(log_file))
-        .stderr(Stdio::from(log_err));
+    // Build a wrapper script that:
+    // 1. Runs the user command under caffeinate
+    // 2. Captures the exit code
+    // 3. Writes exit code to the task directory
+    // This is fully detached — survives the agent process exiting.
+    let wrapper_script = format!(
+        "caffeinate -dis /bin/sh -c {} > {} 2>&1; echo $? > {}",
+        shell_escape(command),
+        log_path.display(),
+        exit_code_path.display(),
+    );
 
-    // Set additional environment variables
-    for (key, value) in env {
-        cmd.env(key, value);
-    }
-
-    // Use caffeinate to prevent sleep during task execution
-    // Wrap the actual command: caffeinate -dis sh -c "actual_command"
-    let child = Command::new("caffeinate")
-        .args(["-dis", "/bin/sh", "-c", command])
+    // Spawn detached: nohup sh -c "wrapper" &
+    // Using setsid-like behavior: stdin=/dev/null, stdout/stderr to /dev/null
+    // (actual output goes to the log file inside the wrapper)
+    let child = Command::new("/bin/sh")
+        .args(["-c", &format!("nohup /bin/sh -c {} </dev/null >/dev/null 2>&1 &\necho $!", shell_escape(&wrapper_script))])
         .current_dir(&cwd)
         .envs(env)
-        .stdout(Stdio::from(
-            fs::File::create(&log_path)
-                .context("re-creating log file for caffeinate")?,
-        ))
-        .stderr(Stdio::from(
-            fs::OpenOptions::new()
-                .append(true)
-                .open(&log_path)
-                .context("opening log file for stderr")?,
-        ))
-        .spawn()
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .stdin(Stdio::null())
+        .output()
         .with_context(|| format!("spawning task: {command}"))?;
 
-    let pid = child.id();
+    // Read the PID of the background wrapper process
+    let pid_str = String::from_utf8_lossy(&child.stdout).trim().to_string();
+    let pid: u32 = pid_str.parse().unwrap_or(0);
 
     // Save task metadata
     let meta = TaskMeta {
@@ -92,6 +86,12 @@ pub fn run_task(
     fs::write(task_dir.join("pid"), pid.to_string())?;
 
     Ok(task_id)
+}
+
+/// Escape a string for use in a shell single-quoted context.
+fn shell_escape(s: &str) -> String {
+    // Wrap in single quotes, escaping any existing single quotes
+    format!("'{}'", s.replace('\'', "'\\''"))
 }
 
 /// Get the current status of a task.
