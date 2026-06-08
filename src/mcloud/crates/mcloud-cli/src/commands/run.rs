@@ -52,6 +52,7 @@ pub fn execute(
 
             // Stream logs incrementally while polling for completion
             let mut offset: u64 = 0;
+            let mut connection_lost = false;
 
             loop {
                 std::thread::sleep(std::time::Duration::from_millis(500));
@@ -64,9 +65,25 @@ pub fn execute(
                     follow: true,
                 };
                 let mut log_session = SshSession::new(node_config)?;
-                if let Response::LogChunk { data, next_offset, .. } =
-                    log_session.send_request(&log_request)?
-                {
+                let log_response = match log_session.send_request(&log_request) {
+                    Ok(resp) => {
+                        if connection_lost {
+                            eprintln!("\n✨ Connection restored.");
+                            connection_lost = false;
+                        }
+                        resp
+                    }
+                    Err(e) => {
+                        if !connection_lost {
+                            eprintln!("\n⚠️  Connection to agent lost. Retrying... (Reason: {})", e);
+                            connection_lost = true;
+                        }
+                        std::thread::sleep(std::time::Duration::from_secs(2));
+                        continue;
+                    }
+                };
+
+                if let Response::LogChunk { data, next_offset, .. } = log_response {
                     if !data.is_empty() {
                         print!("{data}");
                         offset = next_offset;
@@ -75,9 +92,19 @@ pub fn execute(
 
                 // Check task status
                 let mut check_session = SshSession::new(node_config)?;
-                let status_resp = check_session.send_request(&Request::GetStatus {
+                let status_resp = match check_session.send_request(&Request::GetStatus {
                     task_id: task_id.clone(),
-                })?;
+                }) {
+                    Ok(resp) => resp,
+                    Err(e) => {
+                        if !connection_lost {
+                            eprintln!("\n⚠️  Connection to agent lost. Retrying... (Reason: {})", e);
+                            connection_lost = true;
+                        }
+                        std::thread::sleep(std::time::Duration::from_secs(2));
+                        continue;
+                    }
+                };
 
                 match status_resp {
                     Response::TaskStatus {
@@ -91,13 +118,13 @@ pub fn execute(
                             TaskState::Completed => {
                                 // Drain any remaining output
                                 let mut final_session = SshSession::new(node_config)?;
-                                if let Response::LogChunk { data, .. } =
+                                if let Ok(Response::LogChunk { data, .. }) =
                                     final_session.send_request(&Request::GetLogs {
                                         task_id: task_id.clone(),
                                         tail: None,
                                         offset: Some(offset),
                                         follow: false,
-                                    })?
+                                    })
                                 {
                                     if !data.is_empty() {
                                         print!("{data}");
@@ -109,13 +136,13 @@ pub fn execute(
                             TaskState::Failed | TaskState::Killed => {
                                 // Drain remaining output
                                 let mut final_session = SshSession::new(node_config)?;
-                                if let Response::LogChunk { data, .. } =
+                                if let Ok(Response::LogChunk { data, .. }) =
                                     final_session.send_request(&Request::GetLogs {
                                         task_id: task_id.clone(),
                                         tail: None,
                                         offset: Some(offset),
                                         follow: false,
-                                    })?
+                                    })
                                 {
                                     if !data.is_empty() {
                                         print!("{data}");

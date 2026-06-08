@@ -42,6 +42,7 @@ pub fn execute(
     } else {
         // Follow mode: poll incrementally until task completes
         let mut offset: u64 = 0;
+        let mut connection_lost = false;
 
         // If tail is specified, first fetch the tail, then switch to follow
         if tail.is_some() {
@@ -69,7 +70,25 @@ pub fn execute(
                 follow: true,
             };
             let mut log_session = SshSession::new(node_config)?;
-            match log_session.send_request(&log_request)? {
+            let log_resp = match log_session.send_request(&log_request) {
+                Ok(resp) => {
+                    if connection_lost {
+                        eprintln!("\n✨ Connection restored.");
+                        connection_lost = false;
+                    }
+                    resp
+                }
+                Err(e) => {
+                    if !connection_lost {
+                        eprintln!("\n⚠️  Connection to agent lost. Retrying... (Reason: {})", e);
+                        connection_lost = true;
+                    }
+                    std::thread::sleep(std::time::Duration::from_secs(2));
+                    continue;
+                }
+            };
+
+            match log_resp {
                 Response::LogChunk { data, next_offset, .. } => {
                     if !data.is_empty() {
                         print!("{data}");
@@ -84,21 +103,31 @@ pub fn execute(
 
             // Check if task is still running
             let mut status_session = SshSession::new(node_config)?;
-            let status_resp = status_session.send_request(&Request::GetStatus {
+            let status_resp = match status_session.send_request(&Request::GetStatus {
                 task_id: task_id.clone(),
-            })?;
+            }) {
+                Ok(resp) => resp,
+                Err(e) => {
+                    if !connection_lost {
+                        eprintln!("\n⚠️  Connection to agent lost. Retrying... (Reason: {})", e);
+                        connection_lost = true;
+                    }
+                    std::thread::sleep(std::time::Duration::from_secs(2));
+                    continue;
+                }
+            };
 
             if let Response::TaskStatus { state, exit_code, .. } = status_resp {
                 match state {
                     TaskState::Running => continue,
                     TaskState::Completed => {
                         // Drain any remaining output
-                        drain_remaining(node_config, &task_id, offset)?;
+                        let _ = drain_remaining(node_config, &task_id, offset);
                         eprintln!("\n✅ Task completed (exit code: 0)");
                         return Ok(());
                     }
                     TaskState::Failed | TaskState::Killed => {
-                        drain_remaining(node_config, &task_id, offset)?;
+                        let _ = drain_remaining(node_config, &task_id, offset);
                         let code = exit_code.unwrap_or(-1);
                         eprintln!("\n❌ Task {} (exit code: {})",
                             if state == TaskState::Killed { "killed" } else { "failed" },
@@ -124,10 +153,16 @@ fn drain_remaining(
         follow: false,
     };
     let mut session = SshSession::new(node_config)?;
-    if let Response::LogChunk { data, .. } = session.send_request(&request)? {
-        if !data.is_empty() {
-            print!("{data}");
+    match session.send_request(&request) {
+        Ok(Response::LogChunk { data, .. }) => {
+            if !data.is_empty() {
+                print!("{data}");
+            }
         }
+        Err(e) => {
+            eprintln!("⚠️  Failed to drain final logs: {}", e);
+        }
+        _ => {}
     }
     Ok(())
 }
