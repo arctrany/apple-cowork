@@ -104,6 +104,28 @@ fi
 
 # Done
 echo ""
+echo -e "${YELLOW}🔒 Would you like to configure passwordless sudo for powermetrics on the remote node?${NC}"
+echo "   This enables CPU/GPU power tracking in the dashboard."
+echo "   It requires running one sudo command on the remote node to write to /etc/sudoers.d/mcloud-powermetrics."
+read -p "   Configure now? [y/N] " -n 1 -r
+echo ""
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    echo "   Running remote configuration..."
+    ssh -t -p "$PORT" "$TARGET" '
+        CURRENT_USER=$(whoami)
+        RULE_LINE="$CURRENT_USER ALL=(ALL) NOPASSWD: /usr/bin/powermetrics"
+        echo "Creating /etc/sudoers.d/mcloud-powermetrics..."
+        sudo mkdir -p /etc/sudoers.d
+        echo "$RULE_LINE" | sudo tee /etc/sudoers.d/mcloud-powermetrics >/dev/null
+        sudo chmod 440 /etc/sudoers.d/mcloud-powermetrics
+        sudo chown root:wheel /etc/sudoers.d/mcloud-powermetrics
+        echo "✅ Passwordless powermetrics configured!"
+    '
+else
+    echo "   Skipped. You can configure this manually later if you want power stats."
+fi
+
+echo ""
 echo -e "${GREEN}✅ Deployment complete!${NC}"
 echo ""
 echo "Next steps on your local machine:"

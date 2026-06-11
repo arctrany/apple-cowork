@@ -46,6 +46,19 @@ sed "s|__USER__|$(whoami)|g" "$PLIST_SRC" > "$PLIST_DST"
 launchctl load "$PLIST_DST"
 
 echo ""
+echo "🔒 Configuring passwordless sudoers entry for powermetrics..."
+CURRENT_USER="$(whoami)"
+RULE_LINE="$CURRENT_USER ALL=(ALL) NOPASSWD: /usr/bin/powermetrics"
+SUDOERS_FILE="/etc/sudoers.d/mcloud-powermetrics"
+
+echo "Creating local $SUDOERS_FILE..."
+sudo mkdir -p /etc/sudoers.d
+echo "$RULE_LINE" | sudo tee "$SUDOERS_FILE" >/dev/null
+sudo chmod 440 "$SUDOERS_FILE"
+sudo chown root:wheel "$SUDOERS_FILE"
+echo "✅ Passwordless powermetrics configured!"
+
+echo ""
 echo "✅ mcloud-agent installed and running!"
 echo ""
 echo "  Binary:  $BINARY_DST"

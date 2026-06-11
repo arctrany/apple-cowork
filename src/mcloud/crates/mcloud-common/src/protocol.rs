@@ -54,6 +54,10 @@ pub enum Request {
     /// Query node health and power status.
     #[serde(rename = "node_info")]
     NodeInfo,
+
+    /// Get detailed performance metrics.
+    #[serde(rename = "get_metrics")]
+    GetMetrics,
 }
 
 // ─── Agent → CLI Responses ──────────────────────────────────────────────────
@@ -100,6 +104,30 @@ pub enum Response {
         /// pmset sleep setting (0 = never).
         sleep_setting: Option<u32>,
         /// Number of active tasks.
+        active_tasks: usize,
+    },
+
+    /// Detailed performance metrics response.
+    #[serde(rename = "metrics")]
+    Metrics {
+        hostname: String,
+        /// Current CPU usage in percentage (0.0 to 100.0).
+        cpu_usage: f64,
+        /// Current GPU usage in percentage (0.0 to 100.0).
+        gpu_usage: f64,
+        /// CPU temperature in °C if available.
+        temperature_c: Option<f64>,
+        /// Memory used in bytes.
+        memory_used: u64,
+        /// Total memory in bytes.
+        memory_total: u64,
+        /// Storage/disk space used in bytes.
+        storage_used: u64,
+        /// Total storage/disk space in bytes.
+        storage_total: u64,
+        /// Power draw in watts.
+        power_watts: Option<f64>,
+        /// Number of active running tasks.
         active_tasks: usize,
     },
 

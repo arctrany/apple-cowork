@@ -1,6 +1,7 @@
 mod power;
 mod task;
 mod workspace;
+mod metrics;
 
 use anyhow::Result;
 use mcloud_common::protocol::{Request, Response};
@@ -99,6 +100,24 @@ fn handle_request(request: Request) -> Response {
             },
             Err(e) => Response::Error {
                 message: format!("failed to get node info: {e}"),
+            },
+        },
+
+        Request::GetMetrics => match metrics::get_system_metrics() {
+            Ok(m) => Response::Metrics {
+                hostname: m.hostname,
+                cpu_usage: m.cpu_usage,
+                gpu_usage: m.gpu_usage,
+                temperature_c: m.temperature_c,
+                memory_used: m.memory_used,
+                memory_total: m.memory_total,
+                storage_used: m.storage_used,
+                storage_total: m.storage_total,
+                power_watts: m.power_watts,
+                active_tasks: m.active_tasks,
+            },
+            Err(e) => Response::Error {
+                message: format!("failed to get system metrics: {e}"),
             },
         },
     }

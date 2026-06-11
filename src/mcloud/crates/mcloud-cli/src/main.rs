@@ -87,6 +87,10 @@ enum Commands {
         /// Target node name.
         #[arg(short, long)]
         node: Option<String>,
+
+        /// Output in JSON format.
+        #[arg(long)]
+        json: bool,
     },
 
     /// Diagnose connectivity and configuration.
@@ -115,6 +119,13 @@ enum Commands {
         #[arg(long)]
         keep_data: bool,
     },
+
+    /// Start a local Web Dashboard to monitor remote nodes concurrently.
+    Dashboard {
+        /// Port to bind the local web server to.
+        #[arg(short, long, default_value_t = 8080)]
+        port: u16,
+    },
 }
 
 fn main() -> anyhow::Result<()> {
@@ -141,7 +152,7 @@ fn main() -> anyhow::Result<()> {
 
         Commands::Kill { task_id, node } => commands::kill::execute(&task_id, node),
 
-        Commands::Info { node } => commands::info::execute(node),
+        Commands::Info { node, json } => commands::info::execute(node, json),
 
         Commands::Doctor { node } => commands::doctor::execute(node),
 
@@ -152,5 +163,7 @@ fn main() -> anyhow::Result<()> {
         Commands::Uninstall { node, keep_data } => {
             commands::uninstall::execute(node, keep_data)
         }
+
+        Commands::Dashboard { port } => commands::dashboard::execute(port),
     }
 }

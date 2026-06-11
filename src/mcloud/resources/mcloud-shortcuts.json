@@ -1,0 +1,59 @@
+{
+  "shortcut_name": "mcloud Node Status",
+  "description": "Checks the telemetry status of your default mcloud headless node directly from your iPhone, iPad, or Apple Watch.",
+  "target_platforms": ["iOS", "iPadOS", "watchOS", "macOS"],
+  "actions": [
+    {
+      "step": 1,
+      "action_type": "Run Script Over SSH",
+      "parameters": {
+        "host": "<your-node-tailscale-ip-or-hostname>",
+        "port": 22,
+        "user": "<your-ssh-username>",
+        "authentication": "SSH Key (Recommended) or Password",
+        "script": "/usr/local/bin/mcloud info --json"
+      },
+      "output": "Text (JSON string)"
+    },
+    {
+      "step": 2,
+      "action_type": "Get Dictionary from Input",
+      "input": "Output of Step 1",
+      "output": "Dictionary object"
+    },
+    {
+      "step": 3,
+      "action_type": "Get Value for Key",
+      "parameters": {
+        "key": "cpu_usage",
+        "dictionary": "Output of Step 2"
+      },
+      "output": "Number (CPU usage %)"
+    },
+    {
+      "step": 4,
+      "action_type": "Get Value for Key",
+      "parameters": {
+        "key": "power_watts",
+        "dictionary": "Output of Step 2"
+      },
+      "output": "Number (Power draw in Watts)"
+    },
+    {
+      "step": 5,
+      "action_type": "Get Value for Key",
+      "parameters": {
+        "key": "active_tasks",
+        "dictionary": "Output of Step 2"
+      },
+      "output": "Number (Running task count)"
+    },
+    {
+      "step": 6,
+      "action_type": "Show Result / Speak Text",
+      "parameters": {
+        "text": "Node Status: CPU usage is \uFFFD[Step 3]%, drawing \uFFFD[Step 4] Watts with \uFFFD[Step 5] active tasks."
+      }
+    }
+  ]
+}
