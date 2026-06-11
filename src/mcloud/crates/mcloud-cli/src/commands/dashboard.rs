@@ -461,6 +461,24 @@ fn get_dashboard_html() -> String {
             margin-bottom: 0.5rem;
             color: var(--text-main);
         }
+
+        @media (max-width: 600px) {
+            header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1.5rem;
+                margin-bottom: 2rem;
+            }
+            .header-stats {
+                width: 100%;
+                justify-content: flex-start;
+                flex-wrap: wrap;
+                gap: 0.75rem;
+            }
+            body {
+                padding: 1.5rem 1rem;
+            }
+        }
     </style>
 </head>
 <body>
