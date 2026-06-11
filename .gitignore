@@ -43,3 +43,4 @@ wheels/
 # Rust
 target/
 *.rlib
+.gstack/
