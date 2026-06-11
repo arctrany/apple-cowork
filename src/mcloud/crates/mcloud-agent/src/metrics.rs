@@ -14,6 +14,8 @@ pub struct SystemMetrics {
     pub storage_total: u64,
     pub power_watts: Option<f64>,
     pub active_tasks: usize,
+    pub battery_pct: Option<f64>,
+    pub is_charging: Option<bool>,
 }
 
 pub fn get_system_metrics() -> Result<SystemMetrics> {
@@ -73,6 +75,9 @@ pub fn get_system_metrics() -> Result<SystemMetrics> {
         (None, Some(gpu)) => Some(gpu),
         (None, None) => None,
     };
+
+    // 6. Fetch battery state
+    let (battery_pct, is_charging) = get_battery_metrics();
     
     Ok(SystemMetrics {
         hostname,
@@ -85,6 +90,8 @@ pub fn get_system_metrics() -> Result<SystemMetrics> {
         storage_total,
         power_watts: total_power,
         active_tasks,
+        battery_pct,
+        is_charging,
     })
 }
 
@@ -197,4 +204,30 @@ fn count_active_tasks() -> Result<usize> {
     }
 
     Ok(count)
+}
+
+fn get_battery_metrics() -> (Option<f64>, Option<bool>) {
+    let output = Command::new("pmset").args(["-g", "batt"]).output();
+    if let Ok(out) = output {
+        if out.status.success() {
+            let stdout = String::from_utf8_lossy(&out.stdout);
+            let mut pct = None;
+            for line in stdout.lines() {
+                if line.contains('%') {
+                    if let Some(pct_idx) = line.find('%') {
+                        let start_idx = line[..pct_idx]
+                            .rfind(|c: char| !c.is_ascii_digit())
+                            .map(|i| i + 1)
+                            .unwrap_or(0);
+                        if let Ok(parsed) = line[start_idx..pct_idx].parse::<f64>() {
+                            pct = Some(parsed);
+                        }
+                    }
+                }
+            }
+            let drawing_ac = stdout.contains("AC Power") || stdout.contains("AC attached");
+            return (pct, Some(drawing_ac));
+        }
+    }
+    (None, None)
 }

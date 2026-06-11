@@ -115,6 +115,8 @@ fn handle_request(request: Request) -> Response {
                 storage_total: m.storage_total,
                 power_watts: m.power_watts,
                 active_tasks: m.active_tasks,
+                battery_pct: m.battery_pct,
+                is_charging: m.is_charging,
             },
             Err(e) => Response::Error {
                 message: format!("failed to get system metrics: {e}"),

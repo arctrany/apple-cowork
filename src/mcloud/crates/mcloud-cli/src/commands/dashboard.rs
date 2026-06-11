@@ -14,7 +14,7 @@ use crate::ssh::SshSession;
 /// Start a local Web Dashboard to monitor remote nodes.
 pub fn execute(port: u16) -> Result<()> {
     let listener = TcpListener::bind(format!("127.0.0.1:{}", port))?;
-    println!("🚀 mcloud Dashboard running at http://127.0.0.1:{}", port);
+    println!("🚀 Unified compute grid running at http://127.0.0.1:{}", port);
     println!("   Press Ctrl+C to stop the dashboard server.");
 
     // Automatically open in browser
@@ -122,6 +122,8 @@ fn query_node_metrics(node_config: &NodeConfig) -> Result<serde_json::Value> {
             storage_total,
             power_watts,
             active_tasks,
+            battery_pct,
+            is_charging,
         } => Ok(json!({
             "status": "online",
             "hostname": hostname,
@@ -133,7 +135,11 @@ fn query_node_metrics(node_config: &NodeConfig) -> Result<serde_json::Value> {
             "storage_used": storage_used,
             "storage_total": storage_total,
             "power_watts": power_watts,
-            "active_tasks": active_tasks
+            "active_tasks": active_tasks,
+            "battery_pct": battery_pct,
+            "is_charging": is_charging,
+            "device_type": node_config.device_type,
+            "role": node_config.role,
         })),
         mcloud_common::protocol::Response::Error { message } => {
             anyhow::bail!("{message}")
@@ -148,20 +154,21 @@ fn get_dashboard_html() -> String {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>mcloud Dashboard</title>
+    <title>Unified compute grid</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-color: #080a10;
-            --card-bg: rgba(18, 22, 33, 0.65);
+            --bg-color: #0d1117;
+            --card-bg: rgba(22, 27, 34, 0.75);
             --card-border: rgba(255, 255, 255, 0.08);
-            --text-main: #f3f4f6;
-            --text-muted: #9ca3af;
-            --glow-color: rgba(0, 242, 254, 0.25);
-            --success: #10b981;
-            --danger: #ef4444;
-            --primary: #4facfe;
-            --primary-glow: rgba(79, 172, 254, 0.3);
+            --text-main: #e6edf3;
+            --text-muted: #8b949e;
+            --glow-color: rgba(139, 148, 158, 0.15);
+            --success: #3fb950;
+            --danger: #f85149;
+            --primary: #8b949e;
+            --primary-glow: rgba(139, 148, 158, 0.2);
+            --border-hover: rgba(139, 148, 158, 0.4);
         }
 
         * {
@@ -177,8 +184,8 @@ fn get_dashboard_html() -> String {
             min-height: 100vh;
             padding: 2.5rem 1.5rem;
             background-image: 
-                radial-gradient(at 10% 20%, rgba(79, 172, 254, 0.08) 0px, transparent 50%),
-                radial-gradient(at 90% 80%, rgba(0, 242, 254, 0.06) 0px, transparent 50%);
+                radial-gradient(at 10% 20%, rgba(139, 148, 158, 0.04) 0px, transparent 50%),
+                radial-gradient(at 90% 80%, rgba(139, 148, 158, 0.02) 0px, transparent 50%);
             background-attachment: fixed;
         }
 
@@ -200,7 +207,7 @@ fn get_dashboard_html() -> String {
             font-family: 'Outfit', sans-serif;
             font-size: 2.2rem;
             font-weight: 800;
-            background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
+            background: linear-gradient(135deg, #f0f6fc 0%, #8b949e 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             letter-spacing: -0.5px;
@@ -240,9 +247,9 @@ fn get_dashboard_html() -> String {
         }
 
         @keyframes pulse {
-            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-            70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
-            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(63, 185, 80, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(63, 185, 80, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(63, 185, 80, 0); }
         }
 
         .grid {
@@ -265,8 +272,8 @@ fn get_dashboard_html() -> String {
 
         .card:hover {
             transform: translateY(-6px) scale(1.01);
-            border-color: rgba(0, 242, 254, 0.25);
-            box-shadow: 0 12px 40px 0 rgba(0, 242, 254, 0.12);
+            border-color: var(--border-hover);
+            box-shadow: 0 12px 40px 0 rgba(56, 139, 253, 0.08);
         }
 
         .card::before {
@@ -276,7 +283,7 @@ fn get_dashboard_html() -> String {
             left: 0;
             right: 0;
             height: 3px;
-            background: linear-gradient(90deg, #4facfe, #00f2fe);
+            background: linear-gradient(90deg, #30363d, #8b949e);
             opacity: 0.8;
         }
 
@@ -291,9 +298,25 @@ fn get_dashboard_html() -> String {
             margin-bottom: 1.8rem;
         }
 
+        .node-title-group {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .node-title-group .icon-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--card-border);
+            padding: 0.4rem;
+            border-radius: 8px;
+        }
+
         .node-title-group h2 {
             font-family: 'Outfit', sans-serif;
-            font-size: 1.4rem;
+            font-size: 1.3rem;
             font-weight: 700;
             margin-bottom: 0.15rem;
             letter-spacing: -0.3px;
@@ -319,12 +342,12 @@ fn get_dashboard_html() -> String {
         }
 
         .status-pill.online {
-            background: rgba(16, 185, 129, 0.1);
+            background: rgba(63, 185, 80, 0.1);
             color: var(--success);
         }
 
         .status-pill.offline {
-            background: rgba(239, 68, 68, 0.1);
+            background: rgba(248, 81, 73, 0.1);
             color: var(--danger);
         }
 
@@ -379,8 +402,8 @@ fn get_dashboard_html() -> String {
             height: 100%;
             border-radius: 4px;
             width: 0%;
-            background: linear-gradient(90deg, #4facfe, #00f2fe);
-            box-shadow: 0 0 10px rgba(0, 242, 254, 0.3);
+            background: linear-gradient(90deg, #30363d, #8b949e);
+            box-shadow: 0 0 10px rgba(139, 148, 158, 0.15);
             transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
@@ -415,8 +438,8 @@ fn get_dashboard_html() -> String {
         }
 
         .error-panel {
-            background: rgba(239, 68, 68, 0.05);
-            border: 1px solid rgba(239, 68, 68, 0.2);
+            background: rgba(248, 81, 73, 0.05);
+            border: 1px solid rgba(248, 81, 73, 0.2);
             padding: 1rem;
             border-radius: 12px;
             font-size: 0.85rem;
@@ -438,7 +461,7 @@ fn get_dashboard_html() -> String {
         .loader {
             width: 40px;
             height: 40px;
-            border: 3px solid rgba(0, 242, 254, 0.1);
+            border: 3px solid rgba(88, 166, 255, 0.1);
             border-radius: 50%;
             border-top-color: var(--primary);
             animation: spin 1s ease-in-out infinite;
@@ -485,7 +508,7 @@ fn get_dashboard_html() -> String {
     <div class="container">
         <header>
             <div class="logo-section">
-                <h1>mcloud dashboard</h1>
+                <h1>Unified compute grid</h1>
                 <p>Apple Multi-Node Compute & Telemetry Plane</p>
             </div>
             <div class="header-stats">
@@ -517,6 +540,45 @@ fn get_dashboard_html() -> String {
             const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
             const i = Math.floor(Math.log(bytes) / Math.log(k));
             return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+        }
+
+        function getDeviceIcon(type) {
+            const strokeColor = "var(--primary)";
+            switch (type) {
+                case 'macbook-pro':
+                case 'macbook-air':
+                case 'macbook':
+                    return `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="${strokeColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="4" width="18" height="12" rx="2" />
+                        <path d="M2 20h20" />
+                        <path d="M5 16v4" />
+                        <path d="M19 16v4" />
+                    </svg>`;
+                case 'mac-mini':
+                    return `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="${strokeColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="2" y="7" width="20" height="10" rx="2" />
+                        <circle cx="20" cy="12" r="1" fill="${strokeColor}" />
+                    </svg>`;
+                case 'mac-studio':
+                    return `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="${strokeColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="5" width="18" height="14" rx="3" />
+                        <line x1="6" y1="15" x2="8" y2="15" />
+                        <line x1="16" y1="15" x2="18" y2="15" />
+                    </svg>`;
+                case 'apple-watch':
+                    return `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="${strokeColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="6" y="6" width="12" height="12" rx="3" />
+                        <path d="M9 6V2h6v4" />
+                        <path d="M9 18v4h6v-4" />
+                    </svg>`;
+                default:
+                    return `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="${strokeColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="2" y="2" width="20" height="8" rx="2" />
+                        <rect x="2" y="14" width="20" height="8" rx="2" />
+                        <line x1="6" y1="6" x2="6" y2="6.01" />
+                        <line x1="6" y1="18" x2="6" y2="18.01" />
+                    </svg>`;
+            }
         }
 
         async function fetchMetrics() {
@@ -563,12 +625,109 @@ fn get_dashboard_html() -> String {
                     const temp = node.temperature_c !== null ? `${node.temperature_c.toFixed(0)}°C` : 'N/A';
                     const power = node.power_watts !== null ? `${node.power_watts.toFixed(1)}W` : 'N/A';
 
+                    const deviceIcon = getDeviceIcon(node.device_type);
+                    const role = node.role || 'agent';
+
+                    let metricsHtml = '';
+
+                    if (role === 'client') {
+                        const batteryPct = node.battery_pct !== null && node.battery_pct !== undefined ? node.battery_pct : 0;
+                        const batteryLabel = node.battery_pct !== null && node.battery_pct !== undefined ? `${node.battery_pct.toFixed(0)}%` : 'N/A';
+                        const chargingIcon = node.is_charging ? '🔌 AC Attached' : '🔋 Battery';
+                        
+                        metricsHtml = `
+                            <div class="metric-row">
+                                <div class="metric-meta">
+                                    <span class="metric-label">Battery Level</span>
+                                    <span class="metric-value">${batteryLabel}</span>
+                                </div>
+                                <div class="progress-container">
+                                    <div class="progress-bar" style="width: ${batteryPct}%; background: #8b949e;"></div>
+                                </div>
+                            </div>
+                            <div class="metric-row">
+                                <div class="metric-meta">
+                                    <span class="metric-label">Power Source</span>
+                                    <span class="metric-value" style="font-weight: 500;">${chargingIcon}</span>
+                                </div>
+                            </div>
+                            <div class="metric-row">
+                                <div class="metric-meta">
+                                    <span class="metric-label">CPU Usage</span>
+                                    <span class="metric-value">${cpu.toFixed(1)}%</span>
+                                </div>
+                                <div class="progress-container">
+                                    <div class="progress-bar" style="width: ${cpu}%; background: #8b949e;"></div>
+                                </div>
+                            </div>
+                        `;
+                    } else if (role === 'companion') {
+                        const batteryPct = node.battery_pct !== null && node.battery_pct !== undefined ? node.battery_pct : 0;
+                        const batteryLabel = node.battery_pct !== null && node.battery_pct !== undefined ? `${node.battery_pct.toFixed(0)}%` : 'N/A';
+                        metricsHtml = `
+                            <div class="metric-row">
+                                <div class="metric-meta">
+                                    <span class="metric-label">Battery</span>
+                                    <span class="metric-value">${batteryLabel}</span>
+                                </div>
+                                <div class="progress-container">
+                                    <div class="progress-bar" style="width: ${batteryPct}%; background: #8b949e;"></div>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        // agent (default)
+                        metricsHtml = `
+                            <div class="metric-row">
+                                <div class="metric-meta">
+                                    <span class="metric-label">CPU Usage</span>
+                                    <span class="metric-value">${cpu.toFixed(1)}%</span>
+                                </div>
+                                <div class="progress-container">
+                                    <div class="progress-bar" style="width: ${cpu}%; background: #8b949e;"></div>
+                                </div>
+                            </div>
+                            <div class="metric-row">
+                                <div class="metric-meta">
+                                    <span class="metric-label">GPU Utilization</span>
+                                    <span class="metric-value">${gpu.toFixed(1)}%</span>
+                                </div>
+                                <div class="progress-container">
+                                    <div class="progress-bar" style="width: ${gpu}%; background: linear-gradient(90deg, #8b949e, #8b949e)"></div>
+                                </div>
+                            </div>
+                            <div class="metric-row">
+                                <div class="metric-meta">
+                                    <span class="metric-label">Memory</span>
+                                    <span class="metric-value">${memPct}% (${formatBytes(memUsed)} / ${formatBytes(memTotal)})</span>
+                                </div>
+                                <div class="progress-container">
+                                    <div class="progress-bar" style="width: ${memPct}%; background: linear-gradient(90deg, #8b949e, #8b949e)"></div>
+                                </div>
+                            </div>
+                            <div class="metric-row">
+                                <div class="metric-meta">
+                                    <span class="metric-label">Storage</span>
+                                    <span class="metric-value">${diskPct}% (${formatBytes(diskUsed)} / ${formatBytes(diskTotal)})</span>
+                                </div>
+                                <div class="progress-container">
+                                    <div class="progress-bar" style="width: ${diskPct}%; background: linear-gradient(90deg, #8b949e, #8b949e)"></div>
+                                </div>
+                            </div>
+                        `;
+                    }
+
                     html += `
                         <div class="card">
                             <div class="card-header">
                                 <div class="node-title-group">
-                                    <h2>${nodeName}</h2>
-                                    <div class="node-hostname">${node.hostname || ''}</div>
+                                    <div class="icon-wrapper">
+                                        ${deviceIcon}
+                                    </div>
+                                    <div>
+                                        <h2>${nodeName}</h2>
+                                        <div class="node-hostname">${node.hostname || ''}</div>
+                                    </div>
                                 </div>
                                 <div class="status-pill online">
                                     <span class="status-dot"></span>
@@ -576,42 +735,7 @@ fn get_dashboard_html() -> String {
                                 </div>
                             </div>
                             <div class="metrics-list">
-                                <div class="metric-row">
-                                    <div class="metric-meta">
-                                        <span class="metric-label">CPU Usage</span>
-                                        <span class="metric-value">${cpu.toFixed(1)}%</span>
-                                    </div>
-                                    <div class="progress-container">
-                                        <div class="progress-bar" style="width: ${cpu}%"></div>
-                                    </div>
-                                </div>
-                                <div class="metric-row">
-                                    <div class="metric-meta">
-                                        <span class="metric-label">GPU Utilization</span>
-                                        <span class="metric-value">${gpu.toFixed(1)}%</span>
-                                    </div>
-                                    <div class="progress-container">
-                                        <div class="progress-bar" style="width: ${gpu}%; background: linear-gradient(90deg, #ec4899, #f43f5e)"></div>
-                                    </div>
-                                </div>
-                                <div class="metric-row">
-                                    <div class="metric-meta">
-                                        <span class="metric-label">Memory</span>
-                                        <span class="metric-value">${memPct}% (${formatBytes(memUsed)} / ${formatBytes(memTotal)})</span>
-                                    </div>
-                                    <div class="progress-container">
-                                        <div class="progress-bar" style="width: ${memPct}%; background: linear-gradient(90deg, #8b5cf6, #d946ef)"></div>
-                                    </div>
-                                </div>
-                                <div class="metric-row">
-                                    <div class="metric-meta">
-                                        <span class="metric-label">Storage</span>
-                                        <span class="metric-value">${diskPct}% (${formatBytes(diskUsed)} / ${formatBytes(diskTotal)})</span>
-                                    </div>
-                                    <div class="progress-container">
-                                        <div class="progress-bar" style="width: ${diskPct}%; background: linear-gradient(90deg, #f59e0b, #eab308)"></div>
-                                    </div>
-                                </div>
+                                ${metricsHtml}
                             </div>
                             <div class="info-grid">
                                 <div class="info-item">
@@ -634,8 +758,13 @@ fn get_dashboard_html() -> String {
                         <div class="card offline">
                             <div class="card-header">
                                 <div class="node-title-group">
-                                    <h2>${nodeName}</h2>
-                                    <div class="node-hostname">Offline or Unreachable</div>
+                                    <div class="icon-wrapper">
+                                        ${getDeviceIcon(node.device_type)}
+                                    </div>
+                                    <div>
+                                        <h2>${nodeName}</h2>
+                                        <div class="node-hostname">Offline or Unreachable</div>
+                                    </div>
                                 </div>
                                 <div class="status-pill offline">
                                     <span class="status-dot"></span>

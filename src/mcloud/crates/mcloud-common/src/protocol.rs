@@ -129,6 +129,12 @@ pub enum Response {
         power_watts: Option<f64>,
         /// Number of active running tasks.
         active_tasks: usize,
+        /// Battery percentage (0.0 to 100.0) if client.
+        #[serde(default)]
+        battery_pct: Option<f64>,
+        /// Is battery charging or plugged into power.
+        #[serde(default)]
+        is_charging: Option<bool>,
     },
 
     /// Task was killed.

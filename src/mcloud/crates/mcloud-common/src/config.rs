@@ -35,6 +35,14 @@ pub struct NodeConfig {
     /// Path to SSH identity file (optional, uses system default).
     #[serde(default)]
     pub identity_file: Option<PathBuf>,
+
+    /// Device type (e.g. "macbook-pro", "mac-mini", "mac-studio", "apple-watch").
+    #[serde(default)]
+    pub device_type: Option<String>,
+
+    /// Node role (e.g. "client", "agent", "companion").
+    #[serde(default)]
+    pub role: Option<String>,
 }
 
 /// File synchronization configuration.

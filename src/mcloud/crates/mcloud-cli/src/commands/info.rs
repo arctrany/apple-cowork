@@ -24,6 +24,8 @@ pub fn execute(node: Option<String>, json: bool) -> Result<()> {
                 storage_total,
                 power_watts,
                 active_tasks,
+                battery_pct,
+                is_charging,
             } => {
                 let json_val = serde_json::json!({
                     "node": node_name,
@@ -37,6 +39,8 @@ pub fn execute(node: Option<String>, json: bool) -> Result<()> {
                     "storage_total": storage_total,
                     "power_watts": power_watts,
                     "active_tasks": active_tasks,
+                    "battery_pct": battery_pct,
+                    "is_charging": is_charging,
                 });
                 println!("{}", serde_json::to_string_pretty(&json_val)?);
                 return Ok(());
